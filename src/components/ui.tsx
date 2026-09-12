@@ -374,18 +374,25 @@ export function Campo({
   rotulo,
   placeholder,
   valor,
+  aoMudar,
+  aoEnviar,
   seguro,
   multilinha,
   icone,
   teclado,
+  autoCompletar,
 }: {
   rotulo?: string;
   placeholder?: string;
   valor?: string;
+  /** Com `aoMudar`, o campo é controlado pela tela; sem, ele só exibe `valor` como inicial. */
+  aoMudar?: (texto: string) => void;
+  aoEnviar?: () => void;
   seguro?: boolean;
   multilinha?: boolean;
   icone?: IconeNome;
   teclado?: ComponentProps<typeof TextInput>['keyboardType'];
+  autoCompletar?: ComponentProps<typeof TextInput>['autoComplete'];
 }) {
   const c = useCores();
   return (
@@ -409,12 +416,16 @@ export function Campo({
       >
         {icone ? <Ionicons name={icone} size={16} color={c.textFaint} /> : null}
         <TextInput
-          defaultValue={valor}
+          {...(aoMudar ? { value: valor, onChangeText: aoMudar } : { defaultValue: valor })}
           placeholder={placeholder}
           placeholderTextColor={c.textFaint}
           secureTextEntry={seguro}
           multiline={multilinha}
           keyboardType={teclado}
+          autoComplete={autoCompletar}
+          autoCapitalize={teclado === 'email-address' || seguro ? 'none' : 'sentences'}
+          onSubmitEditing={aoEnviar}
+          returnKeyType={aoEnviar ? 'go' : undefined}
           style={{
             flex: 1,
             color: c.ink,

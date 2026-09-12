@@ -14,6 +14,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { negocioNaTela, type NegocioNaTela } from '@/api/adaptar';
+import { moverNegocio, useFunis } from '@/api/recursos';
+import { useAoPerderSessao } from '@/api/sessao';
+import type { ColunaFunil } from '@/api/tipos';
+import { Carregando, FalhaAoCarregar } from '@/components/estados';
 import {
   CabecalhoEtapa,
   CardNegocio,
@@ -22,7 +27,6 @@ import {
   MARGEM_QUADRO,
 } from '@/components/funil';
 import { BotaoIcone, Cabecalho, Chip } from '@/components/ui';
-import { etapasFunil as etapasIniciais, funis, type EtapaFunil, type Negocio } from '@/mock/dados';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -30,13 +34,22 @@ import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 const ZONA_DE_ROLAGEM = 56;
 const VELOCIDADE_ROLAGEM = 9;
 
-type EmArraste = { negocio: Negocio; etapaOrigem: string } | null;
+type EtapaNaTela = { id: string; titulo: string; cards: NegocioNaTela[] };
+type EmArraste = { negocio: NegocioNaTela; etapaOrigem: string } | null;
 
-function somaDaEtapa(etapa: EtapaFunil): number {
+function somaDaEtapa(etapa: EtapaNaTela): number {
   return etapa.cards.reduce((total, card) => {
     const numero = Number(card.valor.replace(/[^0-9]/g, ''));
     return total + (Number.isNaN(numero) ? 0 : numero);
   }, 0);
+}
+
+function paraTela(colunas: ColunaFunil[]): EtapaNaTela[] {
+  return colunas.map((coluna) => ({
+    id: coluna.id,
+    titulo: coluna.titulo,
+    cards: coluna.cards.map(negocioNaTela),
+  }));
 }
 
 /**
@@ -52,9 +65,26 @@ export default function FunilScreen() {
   const c = useCores();
   const router = useRouter();
 
-  const [etapas, setEtapas] = useState<EtapaFunil[]>(etapasIniciais);
+  const aoPerderSessao = useAoPerderSessao();
+  const { dados, carregando, erro, recarregar } = useFunis(aoPerderSessao);
+
+  const [funilAtivo, setFunilAtivo] = useState(0);
+  const [etapas, setEtapas] = useState<EtapaNaTela[]>([]);
   const [emArraste, setEmArraste] = useState<EmArraste>(null);
   const [etapaAlvo, setEtapaAlvo] = useState(-1);
+  const [falhaAoMover, setFalhaAoMover] = useState<string | null>(null);
+
+  const funis = dados ?? [];
+  const funil = funis[funilAtivo];
+
+  // O quadro é editável (arrastar move card na hora), então o estado local é a fonte da tela e o
+  // servidor é a fonte da verdade. Toda vez que a API responde, o local é refeito a partir dela.
+  const assinatura = funil ? `${funil.id}:${funil.colunas.map((co) => `${co.id}=${co.cards.length}`).join(',')}` : '';
+  const [assinaturaAplicada, setAssinaturaAplicada] = useState('');
+  if (funil && assinatura !== assinaturaAplicada) {
+    setAssinaturaAplicada(assinatura);
+    setEtapas(paraTela(funil.colunas));
+  }
 
   const listaRef = useAnimatedRef<Animated.ScrollView>();
   const rolagem = useSharedValue(0);
@@ -95,13 +125,19 @@ export default function FunilScreen() {
   }, false);
 
   const comecarArraste = useCallback(
-    (negocio: Negocio, etapaOrigem: string) => {
+    (negocio: NegocioNaTela, etapaOrigem: string) => {
       setEmArraste({ negocio, etapaOrigem });
       rolagemAutomatica.setActive(true);
     },
     [rolagemAutomatica],
   );
 
+  /**
+   * Solta o card na etapa sob o dedo: move na tela primeiro e grava em seguida.
+   *
+   * Se a gravação falhar, o quadro volta ao que está no banco e a falha aparece — o pior desfecho
+   * aqui seria a tela mostrar o card na etapa nova e o CRM continuar com ele na antiga.
+   */
   const soltar = useCallback(() => {
     rolagemAutomatica.setActive(false);
     const destino = alvo.value;
@@ -122,10 +158,16 @@ export default function FunilScreen() {
             return etapa;
           }),
         );
+
+        setFalhaAoMover(null);
+        moverNegocio(atual.negocio.id, etapaDestino.id).catch((e: unknown) => {
+          setFalhaAoMover(e instanceof Error ? e.message : 'Não foi possível mover o negócio.');
+          recarregar();
+        });
       }
       return null;
     });
-  }, [alvo, etapas, rolagemAutomatica]);
+  }, [alvo, etapas, recarregar, rolagemAutomatica]);
 
   const totalNegocios = etapas.reduce((soma, e) => soma + e.cards.length, 0);
   const valorTotal = etapas.reduce((soma, e) => soma + somaDaEtapa(e), 0);
@@ -139,7 +181,7 @@ export default function FunilScreen() {
     transform: [{ scale: 1.04 }, { rotate: '-1.5deg' }],
   }));
 
-  function CardArrastavel({ negocio, etapaId }: { negocio: Negocio; etapaId: string }) {
+  function CardArrastavel({ negocio, etapaId }: { negocio: NegocioNaTela; etapaId: string }) {
     const arrastar = Gesture.Pan()
       .activateAfterLongPress(220)
       .onStart((e) => {
@@ -184,8 +226,12 @@ export default function FunilScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
       <Cabecalho
-        titulo="Funil comercial"
-        sub={`${totalNegocios} negócios abertos · R$ ${valorTotal.toLocaleString('pt-BR')} em jogo`}
+        titulo={funil?.nome ?? 'Funil'}
+        sub={
+          carregando
+            ? 'Carregando…'
+            : `${totalNegocios} negócios abertos · R$ ${valorTotal.toLocaleString('pt-BR')} em jogo`
+        }
         acao={<BotaoIcone icone="add" cor={c.acaoTexto} fundo={c.acao} />}
       />
 
@@ -196,12 +242,38 @@ export default function FunilScreen() {
           contentContainerStyle={{ gap: space[2], paddingHorizontal: space[4] }}
         >
           {funis.map((f, i) => (
-            <Chip key={f.id} texto={f.nome} ativo={i === 0} />
+            <Chip key={f.id} texto={f.nome} ativo={i === funilAtivo} onPress={() => setFunilAtivo(i)} />
           ))}
           <Chip texto="+ Novo funil" />
         </ScrollView>
       </View>
 
+      {falhaAoMover ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: space[2],
+            marginHorizontal: space[4],
+            marginTop: space[3],
+            padding: space[3],
+            borderRadius: radius.md,
+            backgroundColor: c.dangerSoft,
+          }}
+        >
+          <Ionicons name="alert-circle-outline" size={16} color={c.danger} />
+          <Text style={{ flex: 1, color: c.danger, fontSize: fontSize.sm }}>{falhaAoMover}</Text>
+          <Pressable onPress={() => setFalhaAoMover(null)} hitSlop={8}>
+            <Ionicons name="close" size={16} color={c.danger} />
+          </Pressable>
+        </View>
+      ) : null}
+
+      {erro ? (
+        <FalhaAoCarregar mensagem={erro} aoTentar={recarregar} />
+      ) : carregando && etapas.length === 0 ? (
+        <Carregando texto="Buscando seu funil" />
+      ) : (
       <View ref={quadroRef} onLayout={medirQuadro} style={{ flex: 1 }}>
         <Animated.ScrollView
           ref={listaRef}
@@ -300,6 +372,7 @@ export default function FunilScreen() {
           ) : null}
         </View>
       </View>
+      )}
 
       {emArraste ? (
         <View

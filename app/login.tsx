@@ -1,17 +1,46 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useSessao } from '@/api/sessao';
 import { Marca } from '@/components/Marca';
 import { Botao, Campo, Cartao } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
-/** Entrada no CRM. Espelha `/login` do web: e-mail, senha, recuperação e link para cadastro. */
+/**
+ * Entrada no CRM — agora contra a API de verdade (`/api/auth`, a mesma do painel web).
+ *
+ * Quem já tem sessão válida no aparelho não vê esta tela: o provedor confere ao abrir o app e
+ * este efeito manda direto para dentro.
+ */
 export default function LoginScreen() {
   const c = useCores();
   const router = useRouter();
+  const { entrar, estado } = useSessao();
+
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [entrando, setEntrando] = useState(false);
+
+  useEffect(() => {
+    if (estado === 'dentro') router.replace('/(tabs)/conversas');
+  }, [estado, router]);
+
+  async function enviar() {
+    if (!email.trim() || !senha) {
+      setErro('Informe e-mail e senha.');
+      return;
+    }
+    setErro(null);
+    setEntrando(true);
+    const resultado = await entrar(email.trim(), senha);
+    setEntrando(false);
+    if (!resultado.ok) setErro(resultado.erro ?? 'Não foi possível entrar.');
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.canvas }}>
@@ -47,8 +76,37 @@ export default function LoginScreen() {
               </Text>
             </View>
 
-            <Campo rotulo="E-mail" placeholder="voce@empresa.com.br" icone="mail-outline" teclado="email-address" />
-            <Campo rotulo="Senha" placeholder="Sua senha" icone="lock-closed-outline" seguro />
+            <Campo
+              rotulo="E-mail"
+              placeholder="voce@empresa.com.br"
+              icone="mail-outline"
+              teclado="email-address"
+              valor={email}
+              aoMudar={setEmail}
+              autoCompletar="email"
+            />
+            <Campo
+              rotulo="Senha"
+              placeholder="Sua senha"
+              icone="lock-closed-outline"
+              seguro
+              valor={senha}
+              aoMudar={setSenha}
+              autoCompletar="current-password"
+              aoEnviar={enviar}
+            />
+
+            {erro ? (
+              <View
+                style={{
+                  padding: space[3],
+                  borderRadius: radius.md,
+                  backgroundColor: c.dangerSoft,
+                }}
+              >
+                <Text style={{ color: c.danger, fontSize: fontSize.sm }}>{erro}</Text>
+              </View>
+            ) : null}
 
             <Link href="/esqueci-senha" asChild>
               <Pressable hitSlop={6} style={{ alignSelf: 'flex-end' }}>
@@ -58,7 +116,21 @@ export default function LoginScreen() {
               </Pressable>
             </Link>
 
-            <Botao titulo="Entrar" bloco onPress={() => router.replace('/(tabs)/conversas')} />
+            {entrando || estado === 'verificando' ? (
+              <View
+                style={{
+                  height: 44,
+                  borderRadius: radius.md,
+                  backgroundColor: c.acao,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <ActivityIndicator color={c.acaoTexto} />
+              </View>
+            ) : (
+              <Botao titulo="Entrar" bloco onPress={enviar} />
+            )}
 
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
               <Text style={{ color: c.textMuted, fontSize: fontSize.sm }}>Não possui conta?</Text>

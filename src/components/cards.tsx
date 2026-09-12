@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCores, useSombra } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
-import type { Compromisso, Conversa, Contato, Negocio, Tarefa } from '@/mock/dados';
+import type { ContatoNaTela, ConversaNaTela, NegocioNaTela } from '@/api/adaptar';
+import type { Compromisso, Tarefa } from '@/mock/dados';
 
 import { TagOrigem } from './funil';
 import { Avatar, Cartao, Selo } from './ui';
@@ -44,12 +46,17 @@ export function CartaoCompromisso({ compromisso }: { compromisso: Compromisso })
   );
 }
 
-const ICONE_CANAL = {
+/** Canal do banco é texto livre; um canal novo cai no ícone genérico em vez de quebrar a linha. */
+const ICONE_CANAL: Record<string, ComponentProps<typeof Ionicons>['name']> = {
   WhatsApp: 'logo-whatsapp',
   Instagram: 'logo-instagram',
   TikTok: 'musical-notes-outline',
   'E-mail': 'mail-outline',
-} as const;
+};
+
+function iconeDoCanal(canal: string) {
+  return ICONE_CANAL[canal] ?? 'chatbubble-outline';
+}
 
 /**
  * Conversa da caixa de entrada. No web cada conversa é um cartão branco sobre o cinza da lista
@@ -57,7 +64,7 @@ const ICONE_CANAL = {
  * contínua e achar onde uma termina depende de ler o texto. A barra de 2px na esquerda é o que
  * marca não lida.
  */
-export function LinhaConversa({ conversa, onPress }: { conversa: Conversa; onPress?: () => void }) {
+export function LinhaConversa({ conversa, onPress }: { conversa: ConversaNaTela; onPress?: () => void }) {
   const c = useCores();
   const sombra = useSombra();
   const naoLida = conversa.naoLidas > 0;
@@ -96,7 +103,7 @@ export function LinhaConversa({ conversa, onPress }: { conversa: Conversa; onPre
             borderColor: c.line,
           }}
         >
-          <Ionicons name={ICONE_CANAL[conversa.canal]} size={10} color={c.textMuted} />
+          <Ionicons name={iconeDoCanal(conversa.canal)} size={10} color={c.textMuted} />
         </View>
       </View>
 
@@ -196,7 +203,7 @@ export function CartaoTarefa({ tarefa }: { tarefa: Tarefa }) {
 }
 
 /** Contato da lista — o mesmo cartão da conversa, para as duas listas lerem igual. */
-export function LinhaContato({ contato, onPress }: { contato: Contato; onPress?: () => void }) {
+export function LinhaContato({ contato, onPress }: { contato: ContatoNaTela; onPress?: () => void }) {
   const c = useCores();
   const sombra = useSombra();
 

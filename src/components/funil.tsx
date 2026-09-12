@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { Negocio } from '@/mock/dados';
+import type { NegocioNaTela } from '@/api/adaptar';
 import { useCorDaOrigem, useCores, useSombra } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -44,7 +44,7 @@ export function CardNegocio({
   fantasma = false,
   flutuante = false,
 }: {
-  negocio: Negocio;
+  negocio: NegocioNaTela;
   fantasma?: boolean;
   flutuante?: boolean;
 }) {

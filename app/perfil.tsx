@@ -2,8 +2,8 @@ import { useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useSessao } from '@/api/sessao';
 import { Avatar, Botao, Cabecalho, Campo, Cartao, Divisor, LinhaMenu, Secundario, TituloSecao } from '@/components/ui';
-import { usuario } from '@/mock/dados';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 
@@ -11,24 +11,33 @@ import { fontSize, fontWeight, space } from '@/theme/tokens';
 export default function PerfilScreen() {
   const c = useCores();
   const router = useRouter();
+  const { usuario, sair } = useSessao();
+
+  const nome = usuario?.name ?? '';
+  const iniciais = usuario?.initials ?? (nome || '?').slice(0, 2).toUpperCase();
+  const workspace = usuario?.workspaceNome ?? '';
+  const papel = usuario?.role ?? '';
+
+  async function encerrar() {
+    await sair();
+    router.replace('/login');
+  }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
-      <Cabecalho titulo="Meu perfil" sub={usuario.workspace} voltar />
+      <Cabecalho titulo="Meu perfil" sub={workspace} voltar />
 
       <ScrollView
         contentContainerStyle={{ padding: space[4], paddingBottom: space[7], gap: space[5] }}
         showsVerticalScrollIndicator={false}
       >
         <Cartao style={{ alignItems: 'center', gap: space[3] }}>
-          <Avatar iniciais={usuario.iniciais} tamanho={76} />
+          <Avatar iniciais={iniciais} tamanho={76} />
           <View style={{ alignItems: 'center', gap: 3 }}>
             <Text style={{ color: c.ink, fontSize: fontSize.xl, fontWeight: fontWeight.bold, letterSpacing: -0.3 }}>
-              {usuario.nome}
+              {nome}
             </Text>
-            <Secundario>
-              {usuario.cargo} · Administrador
-            </Secundario>
+            <Secundario>{[papel, workspace].filter(Boolean).join(' · ')}</Secundario>
           </View>
           <Botao titulo="Trocar foto" variante="secundario" icone="camera-outline" />
         </Cartao>
@@ -36,9 +45,9 @@ export default function PerfilScreen() {
         <View style={{ gap: space[3] }}>
           <TituloSecao titulo="Dados pessoais" />
           <Cartao style={{ gap: space[4] }}>
-            <Campo rotulo="Nome" valor={usuario.nome} />
-            <Campo rotulo="E-mail" valor={usuario.email} teclado="email-address" />
-            <Campo rotulo="Cargo" valor={usuario.cargo} />
+            <Campo rotulo="Nome" valor={nome} />
+            <Campo rotulo="E-mail" valor={usuario?.email ?? ''} teclado="email-address" />
+            <Campo rotulo="Papel" valor={papel} />
             <Campo rotulo="WhatsApp" valor="(62) 99999-0000" teclado="phone-pad" />
             <Botao titulo="Salvar alterações" bloco />
           </Cartao>
@@ -55,7 +64,7 @@ export default function PerfilScreen() {
           </Cartao>
         </View>
 
-        <Botao titulo="Sair da conta" variante="perigo" icone="log-out-outline" bloco onPress={() => router.replace('/login')} />
+        <Botao titulo="Sair da conta" variante="perigo" icone="log-out-outline" bloco onPress={encerrar} />
       </ScrollView>
     </SafeAreaView>
   );

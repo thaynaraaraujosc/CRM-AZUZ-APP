@@ -2,10 +2,23 @@
 
 Aplicativo móvel do CRM AZUZ, em React Native com Expo (SDK 57) e expo-router.
 
-**Esta entrega é só a camada visual.** Todas as telas existem e navegam entre si, mas nenhuma
-busca API, grava dado ou guarda estado entre sessões. O conteúdo vem de `src/mock/dados.ts`, com
-nomes, origens e etapas copiados do CRM web para o desenho ser avaliado com dado parecido com o
-real. A única preferência que muda de verdade é o tema, em Configurações › Aparência.
+## Ligação com o CRM
+
+O app fala com a **mesma API do painel web** (`https://azuzcrm.com.br`), sem nenhuma rota criada
+só para ele. A sessão é o cookie do Auth.js: o aparelho guarda esse cookie sozinho, então basta o
+login uma vez e as chamadas seguintes já vão assinadas. Trocar de ambiente é definir
+`EXPO_PUBLIC_API_URL`.
+
+Ligadas na API de verdade: **login e sessão**, **Conversas**, **Funil** (inclusive gravar o card
+movido em `/api/funis/mover`), **Contatos**, **Equipe**, e o perfil no menu.
+
+Ainda em conteúdo estático (`src/mock/dados.ts`): Tarefas, Agenda, Automações, Formulários,
+Documentos, Azuz IA, Inteligência comercial, Configurações e as telas de detalhe de conversa,
+contato e negócio.
+
+**Aviso sobre a versão web.** O `npm run web` roda, mas não consegue falar com o CRM: o navegador
+bloqueia por CORS, e o servidor não manda `Access-Control-Allow-Origin`. iOS e Android não têm
+essa restrição. A web serve para conferir layout, não dado.
 
 ## Rodar
 
@@ -36,6 +49,7 @@ cliente, motivos de perda e relatórios.
 
 ```
 app/                    rotas (expo-router, uma pasta por área)
+src/api/                cliente HTTP, sessão, tipos da API e tradução para a tela
 src/theme/tokens.ts     cores, raio, espaçamento e tipografia
 src/theme/ThemeContext  tema claro/escuro, seguindo o sistema por padrão
 src/components/ui.tsx   primitivos: tela, cabeçalho, cartão, botão, campo, chip, indicador…
@@ -58,5 +72,6 @@ Os tokens vêm do `globals.css` do CRM web, então o aplicativo e o painel são 
 
 ## O que ainda não existe
 
-Autenticação, chamadas de API, envio de mensagem, arrastar card no funil, upload, push e
-persistência. Os botões estão desenhados e posicionados; nenhum deles chama nada.
+Envio de mensagem, upload, notificação push, e a gravação nas telas que continuam em conteúdo
+estático. Criar, editar e excluir ainda não estão ligados em lugar nenhum — o que grava hoje é só
+mover um card no funil.

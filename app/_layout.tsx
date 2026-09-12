@@ -3,10 +3,11 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { SessaoProvider } from '@/api/sessao';
 import { TemaProvider, useTema } from '@/theme/ThemeContext';
 
 /**
- * Casca do app. O empilhamento é: tema → área segura → navegação.
+ * Casca do app. O empilhamento é: tema → área segura → sessão → navegação.
  *
  * Todas as telas escondem o cabeçalho nativo e desenham o próprio (`<Cabecalho />`), porque o CRM
  * web tem uma topbar com título + linha de contexto + ação, e o header padrão do React Navigation
@@ -17,7 +18,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <TemaProvider>
-          <Navegacao />
+          <SessaoProvider>
+            <Navegacao />
+          </SessaoProvider>
         </TemaProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

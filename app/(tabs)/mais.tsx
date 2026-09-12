@@ -4,8 +4,8 @@ import type { ComponentProps } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useSessao } from '@/api/sessao';
 import { Avatar, Cabecalho, Cartao, Divisor, LinhaMenu, TituloSecao } from '@/components/ui';
-import { usuario } from '@/mock/dados';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -39,6 +39,17 @@ const CONTA: Item[] = [
 export default function MaisScreen() {
   const c = useCores();
   const router = useRouter();
+  const { usuario, sair } = useSessao();
+
+  const nome = usuario?.name ?? 'Sua conta';
+  const iniciais = usuario?.initials ?? (usuario?.name ?? '?').slice(0, 2).toUpperCase();
+  const workspace = usuario?.workspaceNome ?? '';
+  const cargo = usuario?.role ?? usuario?.email ?? '';
+
+  async function encerrar() {
+    await sair();
+    router.replace('/login');
+  }
 
   function Grupo({ titulo, itens }: { titulo: string; itens: Item[] }) {
     return (
@@ -65,7 +76,7 @@ export default function MaisScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
-      <Cabecalho titulo="Mais" sub={usuario.workspace} />
+      <Cabecalho titulo="Mais" sub={workspace} />
 
       <ScrollView
         contentContainerStyle={{ paddingVertical: space[4], paddingBottom: space[7], gap: space[5] }}
@@ -74,11 +85,11 @@ export default function MaisScreen() {
         {/* Cartão da conta */}
         <View style={{ paddingHorizontal: space[4] }}>
           <Cartao onPress={() => router.push('/perfil')} style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-            <Avatar iniciais={usuario.iniciais} tamanho={48} />
+            <Avatar iniciais={iniciais} tamanho={48} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: c.ink, fontSize: fontSize.md, fontWeight: fontWeight.bold }}>{usuario.nome}</Text>
-              <Text style={{ color: c.textMuted, fontSize: fontSize.sm, marginTop: 2 }}>
-                {usuario.cargo} · {usuario.workspace}
+              <Text style={{ color: c.ink, fontSize: fontSize.md, fontWeight: fontWeight.bold }}>{nome}</Text>
+              <Text numberOfLines={1} style={{ color: c.textMuted, fontSize: fontSize.sm, marginTop: 2 }}>
+                {[cargo, workspace].filter(Boolean).join(' · ')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={c.textFaint} />
@@ -100,7 +111,7 @@ export default function MaisScreen() {
 
         <View style={{ paddingHorizontal: space[4] }}>
           <Pressable
-            onPress={() => router.replace('/login')}
+            onPress={encerrar}
             style={({ pressed }) => ({
               flexDirection: 'row',
               alignItems: 'center',

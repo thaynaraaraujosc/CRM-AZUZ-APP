@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Redirect, Tabs } from 'expo-router';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { useSessao } from '@/api/sessao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight } from '@/theme/tokens';
 
@@ -15,6 +16,18 @@ import { fontSize, fontWeight } from '@/theme/tokens';
  */
 export default function TabsLayout() {
   const c = useCores();
+  const { estado } = useSessao();
+
+  // A área logada não monta sem sessão: assim nenhuma tela dispara chamada que já se sabe que vai
+  // voltar como "não autenticado", e a pessoa não vê quatro erros antes de cair no login.
+  if (estado === 'verificando') {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.canvas }}>
+        <ActivityIndicator color={c.blue} />
+      </View>
+    );
+  }
+  if (estado === 'fora') return <Redirect href="/login" />;
 
   return (
     <Tabs
@@ -41,8 +54,6 @@ export default function TabsLayout() {
         name="conversas"
         options={{
           title: 'Conversas',
-          tabBarBadge: 6,
-          tabBarBadgeStyle: { backgroundColor: c.blue, color: '#FFFFFF', fontSize: 10 },
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={21} color={color} />
           ),
