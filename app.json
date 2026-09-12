@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "AZUZ CRM",
-    "slug": "CRM-AZUZ-APP",
+    "slug": "azuz-crm",
     "scheme": "azuzcrm",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -27,7 +27,9 @@
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true
     }
