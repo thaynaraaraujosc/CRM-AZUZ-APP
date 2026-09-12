@@ -180,12 +180,57 @@ export const fontWeight = {
   bold: '700',
 } as const;
 
-/** Cor de cada origem de lead — mesma nomenclatura do CRM web. */
-export const corDaOrigem: Record<string, string> = {
-  'Meta Ads': '#2E6BFF',
-  'Google Ads': '#0A7A4D',
-  Instagram: '#8A3FFC',
-  TikTok: '#253052',
-  'Indicação': '#8A6600',
-  'Formulário': '#0F766E',
+/**
+ * Cor de cada origem de lead — os mesmos valores do CRM web (`.origem-*` no `globals.css`):
+ * a cor da própria plataforma, não uma cor do tema.
+ *
+ * O preto do TikTok fica ilegível sobre fundo escuro, então lá ele segue a tinta do tema. É a
+ * única exceção, e o web abre a mesma.
+ */
+export function corDaOrigem(origem: string, escuro = false): string {
+  switch (origem) {
+    case 'Meta Ads':
+      return '#1877F2';
+    case 'Google Ads':
+      return '#4285F4';
+    case 'Instagram':
+      return '#E1306C';
+    case 'TikTok':
+      return escuro ? paletaEscura.ink : '#000000';
+    case 'Indicação':
+      return escuro ? paletaEscura.textFaint : paletaClara.textFaint;
+    case 'Formulário':
+      return escuro ? paletaEscura.blue : paletaClara.blue;
+    default:
+      return escuro ? paletaEscura.textMuted : paletaClara.textMuted;
+  }
+}
+
+/**
+ * Sombras — os mesmos valores do `globals.css`, inclusive as duas camadas de cada nível: um
+ * contato curto e escuro logo abaixo da peça, e um halo largo e quase transparente. É essa
+ * combinação que faz o card parecer pousado numa superfície; uma sombra só, difusa, faz ele
+ * parecer boiando.
+ *
+ * Vem como `boxShadow` porque o React Native aceita a propriedade desde a nova arquitetura, e é
+ * ela que suporta lista de camadas — as antigas `shadow*` só aceitam uma, e estão descontinuadas.
+ */
+export type NivelDeSombra = 'xs' | 'sm' | 'md' | 'lg';
+
+const SOMBRAS_CLARAS: Record<NivelDeSombra, string> = {
+  xs: '0px 1px 2px rgba(11, 21, 51, 0.05)',
+  sm: '0px 1px 2px rgba(11, 21, 51, 0.06), 0px 2px 6px rgba(11, 21, 51, 0.04)',
+  md: '0px 1px 3px rgba(11, 21, 51, 0.07), 0px 6px 16px rgba(11, 21, 51, 0.05)',
+  lg: '0px 2px 6px rgba(11, 21, 51, 0.06), 0px 24px 56px rgba(11, 21, 51, 0.12)',
 };
+
+const SOMBRAS_ESCURAS: Record<NivelDeSombra, string> = {
+  xs: '0px 1px 1px rgba(0, 0, 0, 0.3)',
+  sm: '0px 1px 2px rgba(0, 0, 0, 0.36)',
+  md: '0px 1px 3px rgba(0, 0, 0, 0.4)',
+  lg: '0px 8px 28px rgba(0, 0, 0, 0.5)',
+};
+
+export function sombra(nivel: NivelDeSombra, escuro = false) {
+  return { boxShadow: escuro ? SOMBRAS_ESCURAS[nivel] : SOMBRAS_CLARAS[nivel] };
+}

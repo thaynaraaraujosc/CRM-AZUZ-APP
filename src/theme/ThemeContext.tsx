@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 
-import { paletaClara, paletaEscura, type Paleta } from './tokens';
+import { corDaOrigem, paletaClara, paletaEscura, sombra, type NivelDeSombra, type Paleta } from './tokens';
 
 type Modo = 'sistema' | 'claro' | 'escuro';
 
@@ -48,4 +48,19 @@ export function useTema() {
 /** Atalho para quem só precisa das cores. */
 export function useCores() {
   return useTema().cores;
+}
+
+/**
+ * Cor da origem já resolvida para o tema atual — evita que cada tela precise carregar o `escuro`
+ * só para pintar uma etiqueta.
+ */
+export function useCorDaOrigem() {
+  const { escuro } = useTema();
+  return (origem: string) => corDaOrigem(origem, escuro);
+}
+
+/** Sombra já resolvida para o tema atual. */
+export function useSombra() {
+  const { escuro } = useTema();
+  return (nivel: NivelDeSombra) => sombra(nivel, escuro);
 }

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LinhaContato } from '@/components/cards';
@@ -38,13 +38,11 @@ export default function ContatosScreen() {
       <FlatList
         data={contatos}
         keyExtractor={(item) => item.id}
-        ItemSeparatorComponent={() => (
-          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.line, marginLeft: 70 }} />
-        )}
         renderItem={({ item }) => (
           <LinhaContato contato={item} onPress={() => router.push(`/contatos/${item.id}`)} />
         )}
-        contentContainerStyle={{ backgroundColor: c.surface }}
+        contentContainerStyle={{ padding: space[4], gap: 7 }}
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );

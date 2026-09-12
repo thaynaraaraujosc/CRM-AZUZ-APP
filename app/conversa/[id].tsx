@@ -12,10 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { TagOrigem } from '@/components/funil';
 import { Avatar, Chip, Selo } from '@/components/ui';
 import { conversas, mensagens } from '@/mock/dados';
 import { useCores } from '@/theme/ThemeContext';
-import { corDaOrigem, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 const ACOES_RAPIDAS = ['Atribuir ao funil', 'Criar tarefa', 'Marcar como resolvida', 'Resumir com IA'];
 
@@ -82,7 +83,7 @@ export default function ConversaScreen() {
           borderBottomColor: c.line,
         }}
       >
-        <Selo texto={conversa.origem} cor={corDaOrigem[conversa.origem]} fundo={c.surface} />
+        <TagOrigem origem={conversa.origem} />
         <Selo texto="Qualificado" />
         <Selo texto="R$ 890" icone="pricetag-outline" />
         <View style={{ flex: 1 }} />

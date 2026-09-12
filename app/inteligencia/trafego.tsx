@@ -3,14 +3,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BarraProgresso, Cabecalho, Cartao, Chip, Corpo, Indicador, Secundario, TituloSecao } from '@/components/ui';
 import { canaisDeTrafego } from '@/mock/dados';
-import { useCores } from '@/theme/ThemeContext';
-import { corDaOrigem, fontSize, fontWeight, space } from '@/theme/tokens';
+import { useCorDaOrigem, useCores } from '@/theme/ThemeContext';
+import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 const PERIODOS = ['7 dias', '30 dias', 'Este mês'];
 
 /** Origem paga x orgânica: quanto entrou, quanto custou e o retorno. */
 export default function TrafegoScreen() {
   const c = useCores();
+  const corOrigem = useCorDaOrigem();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
@@ -49,7 +50,7 @@ export default function TrafegoScreen() {
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: corDaOrigem[canal.nome] ?? c.textMuted,
+                    backgroundColor: corOrigem(canal.nome) ?? c.textMuted,
                   }}
                 />
                 <Text style={{ flex: 1, color: c.ink, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>
@@ -61,7 +62,7 @@ export default function TrafegoScreen() {
                 <Secundario>leads</Secundario>
               </View>
 
-              <BarraProgresso valor={canal.share} cor={corDaOrigem[canal.nome] ?? c.textMuted} />
+              <BarraProgresso valor={canal.share} cor={corOrigem(canal.nome) ?? c.textMuted} />
 
               <View style={{ flexDirection: 'row', gap: space[5] }}>
                 <View>

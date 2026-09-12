@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useCores } from '@/theme/ThemeContext';
-import { corDaOrigem, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { useCores, useSombra } from '@/theme/ThemeContext';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import type { Compromisso, Conversa, Contato, Negocio, Tarefa } from '@/mock/dados';
 
+import { TagOrigem } from './funil';
 import { Avatar, Cartao, Selo } from './ui';
 
 /** Compromisso da agenda do dia. */
@@ -50,9 +51,15 @@ const ICONE_CANAL = {
   'E-mail': 'mail-outline',
 } as const;
 
-/** Linha da caixa de entrada — canal, prévia, tempo e contador de não lidas. */
+/**
+ * Conversa da caixa de entrada. No web cada conversa é um cartão branco sobre o cinza da lista
+ * (`.wa-row`), não uma faixa encostada na outra: sem isso, vinte conversas viram uma coluna
+ * contínua e achar onde uma termina depende de ler o texto. A barra de 2px na esquerda é o que
+ * marca não lida.
+ */
 export function LinhaConversa({ conversa, onPress }: { conversa: Conversa; onPress?: () => void }) {
   const c = useCores();
+  const sombra = useSombra();
   const naoLida = conversa.naoLidas > 0;
 
   return (
@@ -61,13 +68,19 @@ export function LinhaConversa({ conversa, onPress }: { conversa: Conversa; onPre
       style={({ pressed }) => ({
         flexDirection: 'row',
         gap: space[3],
-        paddingHorizontal: space[4],
-        paddingVertical: space[3],
-        backgroundColor: pressed ? c.surfaceHover : c.surface,
+        padding: space[3],
+        paddingRight: space[4],
+        backgroundColor: pressed ? c.surfaceHover : c.surfaceElevated,
+        borderRadius: radius.md,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: c.line,
+        borderLeftWidth: 2,
+        borderLeftColor: naoLida ? c.blue : c.line,
+        ...sombra('xs'),
       })}
     >
       <View>
-        <Avatar iniciais={conversa.iniciais} tamanho={44} />
+        <Avatar iniciais={conversa.iniciais} tamanho={42} />
         <View
           style={{
             position: 'absolute',
@@ -76,7 +89,7 @@ export function LinhaConversa({ conversa, onPress }: { conversa: Conversa; onPre
             width: 18,
             height: 18,
             borderRadius: 9,
-            backgroundColor: c.surface,
+            backgroundColor: c.surfaceElevated,
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: StyleSheet.hairlineWidth,
@@ -91,11 +104,17 @@ export function LinhaConversa({ conversa, onPress }: { conversa: Conversa; onPre
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
           <Text
             numberOfLines={1}
-            style={{ flex: 1, color: c.inkNome, fontSize: fontSize.base, fontWeight: fontWeight.bold }}
+            style={{
+              flex: 1,
+              color: naoLida ? c.ink : c.inkNome,
+              fontSize: 14,
+              fontWeight: fontWeight.bold,
+              letterSpacing: -0.1,
+            }}
           >
             {conversa.nome}
           </Text>
-          <Text style={{ color: naoLida ? c.blue : c.textFaint, fontSize: fontSize.xs }}>{conversa.tempo}</Text>
+          <Text style={{ color: naoLida ? c.blue : c.textFaint, fontSize: 10.5 }}>{conversa.tempo}</Text>
         </View>
 
         <Text
@@ -106,13 +125,15 @@ export function LinhaConversa({ conversa, onPress }: { conversa: Conversa; onPre
         </Text>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: 2 }}>
-          <Selo texto={conversa.origem} cor={corDaOrigem[conversa.origem]} fundo={c.gray100} />
+          <TagOrigem origem={conversa.origem} />
           {conversa.responsavel ? (
-            <Text numberOfLines={1} style={{ color: c.textFaint, fontSize: fontSize.xs, flex: 1 }}>
+            <Text numberOfLines={1} style={{ color: c.textFaint, fontSize: 10.5, flex: 1 }}>
               {conversa.responsavel}
             </Text>
           ) : (
-            <Selo texto="Sem responsável" cor={c.warning} fundo={c.warningSoft} />
+            <View style={{ flex: 1, alignItems: 'flex-start' }}>
+              <Selo texto="Sem responsável" cor={c.warning} fundo={c.warningSoft} />
+            </View>
           )}
           {naoLida ? (
             <View
@@ -126,49 +147,14 @@ export function LinhaConversa({ conversa, onPress }: { conversa: Conversa; onPre
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: fontWeight.bold }}>{conversa.naoLidas}</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: fontWeight.bold }}>
+                {conversa.naoLidas}
+              </Text>
             </View>
           ) : null}
         </View>
       </View>
     </Pressable>
-  );
-}
-
-/** Card de negócio no kanban do funil. */
-export function CartaoNegocio({ negocio, onPress }: { negocio: Negocio; onPress?: () => void }) {
-  const c = useCores();
-
-  return (
-    <Cartao onPress={onPress} padding={space[3]} style={{ gap: space[2] }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-        <Avatar iniciais={negocio.iniciais} tamanho={30} />
-        <Text
-          numberOfLines={1}
-          style={{ flex: 1, color: c.inkNome, fontSize: fontSize.base, fontWeight: fontWeight.bold }}
-        >
-          {negocio.nome}
-        </Text>
-      </View>
-
-      <Text style={{ color: c.ink, fontSize: fontSize.lg, fontWeight: fontWeight.bold, letterSpacing: -0.3 }}>
-        {negocio.valor}
-      </Text>
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: space[1] }}>
-        <Selo texto={negocio.origem} cor={corDaOrigem[negocio.origem]} fundo={c.gray100} />
-        {negocio.etiquetas.map((e) => (
-          <Selo key={e} texto={e} />
-        ))}
-      </View>
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-        <Ionicons name="time-outline" size={12} color={c.textFaint} />
-        <Text style={{ color: c.textFaint, fontSize: fontSize.xs, flex: 1 }} numberOfLines={1}>
-          {negocio.dias} nesta etapa · {negocio.responsavel || 'sem responsável'}
-        </Text>
-      </View>
-    </Cartao>
   );
 }
 
@@ -209,9 +195,10 @@ export function CartaoTarefa({ tarefa }: { tarefa: Tarefa }) {
   );
 }
 
-/** Linha da lista de contatos. */
+/** Contato da lista — o mesmo cartão da conversa, para as duas listas lerem igual. */
 export function LinhaContato({ contato, onPress }: { contato: Contato; onPress?: () => void }) {
   const c = useCores();
+  const sombra = useSombra();
 
   return (
     <Pressable
@@ -220,29 +207,38 @@ export function LinhaContato({ contato, onPress }: { contato: Contato; onPress?:
         flexDirection: 'row',
         alignItems: 'center',
         gap: space[3],
-        paddingHorizontal: space[4],
-        paddingVertical: space[3],
-        backgroundColor: pressed ? c.surfaceHover : c.surface,
+        padding: space[3],
+        paddingRight: space[4],
+        backgroundColor: pressed ? c.surfaceHover : c.surfaceElevated,
+        borderRadius: radius.md,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: c.line,
+        borderLeftWidth: 2,
+        borderLeftColor: contato.favorito ? c.warning : c.line,
+        ...sombra('xs'),
       })}
     >
       <Avatar iniciais={contato.iniciais} tamanho={42} />
 
-      <View style={{ flex: 1, gap: 3 }}>
+      <View style={{ flex: 1, gap: 4 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[1] }}>
-          <Text numberOfLines={1} style={{ color: c.inkNome, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>
+          <Text
+            numberOfLines={1}
+            style={{ color: c.inkNome, fontSize: 14, fontWeight: fontWeight.bold, letterSpacing: -0.1 }}
+          >
             {contato.nome}
           </Text>
-          {contato.favorito ? <Ionicons name="star" size={12} color={c.warning} /> : null}
+          {contato.favorito ? <Ionicons name="star" size={11} color={c.warning} /> : null}
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[1] }}>
-          <Selo texto={contato.origem} cor={corDaOrigem[contato.origem]} fundo={c.gray100} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+          <TagOrigem origem={contato.origem} />
           <Selo texto={contato.etapa} />
         </View>
       </View>
 
       <View style={{ alignItems: 'flex-end', gap: 3 }}>
-        <Text style={{ color: c.ink, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>{contato.valor}</Text>
-        <Text style={{ color: c.textFaint, fontSize: fontSize.xs }}>{contato.ultima}</Text>
+        <Text style={{ color: c.ink, fontSize: 14, fontWeight: fontWeight.bold }}>{contato.valor}</Text>
+        <Text style={{ color: c.textFaint, fontSize: 10.5 }}>{contato.ultima}</Text>
       </View>
     </Pressable>
   );

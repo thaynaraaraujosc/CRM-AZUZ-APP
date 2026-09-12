@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useCores } from '@/theme/ThemeContext';
+import { useCores, useSombra } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 type IconeNome = ComponentProps<typeof Ionicons>['name'];
@@ -192,12 +192,16 @@ export function Cartao({
   padding?: number;
 }) {
   const c = useCores();
+  const sombra = useSombra();
   const base: ViewStyle = {
-    backgroundColor: c.surface,
+    backgroundColor: c.surfaceElevated,
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: c.line,
+    // Borda quase transparente: no web o card se separa por SOMBRA, e o traço só dá o corte
+    // exato onde a sombra sozinha ficaria vaga.
+    borderColor: c.lineSoft,
     padding,
+    ...sombra('sm'),
   };
 
   if (onPress) {
@@ -471,17 +475,16 @@ export function Chip({
         paddingHorizontal: space[3],
         height: 32,
         justifyContent: 'center',
-        borderRadius: radius.pill,
-        backgroundColor: ativo ? c.acao : c.surface,
+        borderRadius: radius.md,
+        backgroundColor: ativo ? c.acao : pressed ? c.surfaceHover : 'transparent',
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: ativo ? c.acaoBorda : c.line,
-        opacity: pressed ? 0.8 : 1,
+        borderColor: ativo ? c.acaoBorda : 'transparent',
       })}
     >
       <Text
         style={{
           color: ativo ? c.acaoTexto : (cor ?? c.textMuted),
-          fontSize: fontSize.sm,
+          fontSize: 12,
           fontWeight: fontWeight.bold,
         }}
       >
@@ -523,14 +526,14 @@ export function Selo({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        paddingHorizontal: space[2],
-        paddingVertical: 3,
-        borderRadius: radius.sm,
+        paddingHorizontal: space[3],
+        paddingVertical: space[1],
+        borderRadius: radius.xl,
         backgroundColor: fundo ?? c.gray100,
       }}
     >
       {icone ? <Ionicons name={icone} size={11} color={cor ?? c.textMuted} /> : null}
-      <Text style={{ color: cor ?? c.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>
+      <Text style={{ color: cor ?? c.textMuted, fontSize: 10.5, fontWeight: fontWeight.bold }}>
         {texto}
       </Text>
     </View>

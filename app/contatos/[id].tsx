@@ -3,10 +3,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { TagOrigem } from '@/components/funil';
 import { Avatar, Cabecalho, Cartao, Corpo, Divisor, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { contatos } from '@/mock/dados';
 import { useCores } from '@/theme/ThemeContext';
-import { corDaOrigem, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 const LINHA_DO_TEMPO = [
   { id: 'l1', icone: 'chatbubble-ellipses-outline', texto: 'Respondeu no WhatsApp', quando: 'há 6 min' },
@@ -74,7 +75,7 @@ export default function ContatoScreen() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: space[1], flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Selo texto={contato.origem} cor={corDaOrigem[contato.origem]} fundo={c.gray100} />
+            <TagOrigem origem={contato.origem} />
             <Selo texto={contato.etapa} />
             {contato.etiquetas.map((e) => (
               <Selo key={e} texto={e} cor={c.blue} fundo={c.blueSoft} />

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LinhaConversa } from '@/components/cards';
@@ -42,14 +42,11 @@ export default function ConversasScreen() {
       <FlatList
         data={conversas}
         keyExtractor={(item) => item.id}
-        ItemSeparatorComponent={() => (
-          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.line, marginLeft: 71 }} />
-        )}
         renderItem={({ item }) => (
           <LinhaConversa conversa={item} onPress={() => router.push(`/conversa/${item.id}`)} />
         )}
-        contentContainerStyle={{ backgroundColor: c.surface }}
-        style={{ backgroundColor: c.canvas }}
+        contentContainerStyle={{ padding: space[4], gap: 7 }}
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
