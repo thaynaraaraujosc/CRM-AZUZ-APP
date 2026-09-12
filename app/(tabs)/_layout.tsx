@@ -6,9 +6,12 @@ import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight } from '@/theme/tokens';
 
 /**
- * Barra inferior com os cinco destinos de uso diário. O menu lateral do web tem vinte itens —
- * num telefone isso não cabe e nem deveria: os quatro módulos que a pessoa abre todo dia ficam à
+ * Barra inferior com os quatro destinos de uso diário. O menu lateral do web tem vinte itens —
+ * num telefone isso não cabe e nem deveria: os três módulos que a pessoa abre todo dia ficam à
  * mão e o resto vive em "Mais".
+ *
+ * Conversas é a primeira aba, e por isso a tela de abertura do app: é a caixa de entrada, o que
+ * mais se abre num dia de trabalho.
  */
 export default function TabsLayout() {
   const c = useCores();
@@ -34,15 +37,6 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: c.canvas },
       }}
     >
-      <Tabs.Screen
-        name="inicio"
-        options={{
-          title: 'Início',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={21} color={color} />
-          ),
-        }}
-      />
       <Tabs.Screen
         name="conversas"
         options={{

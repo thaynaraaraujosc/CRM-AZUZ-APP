@@ -20,9 +20,9 @@ Abra no Expo Go (QR Code no terminal), ou `npm run ios` / `npm run android` / `n
 
 **Entrada** — login, cadastro, recuperação de senha.
 
-**Barra inferior** — Início (Central do Dia), Conversas, Funil, Tarefas, Mais.
-O menu lateral do web tem vinte itens; num telefone isso não cabe, então os quatro módulos de uso
-diário ficam à mão e o resto vive em "Mais".
+**Barra inferior** — Conversas, Funil, Tarefas, Mais.
+O menu lateral do web tem vinte itens; num telefone isso não cabe, então os três módulos de uso
+diário ficam à mão e o resto vive em "Mais". O app abre em Conversas, que é a caixa de entrada.
 
 **Empilhadas** — conversa aberta, contatos e ficha do contato, negócio do funil, agenda, equipe,
 automações, formulários, documentos, Azuz IA, notificações, perfil.

@@ -3,55 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCores } from '@/theme/ThemeContext';
 import { corDaOrigem, fontSize, fontWeight, radius, space } from '@/theme/tokens';
-import type { Compromisso, Conversa, Contato, ItemDoDia, Negocio, Prioridade, Tarefa } from '@/mock/dados';
+import type { Compromisso, Conversa, Contato, Negocio, Tarefa } from '@/mock/dados';
 
 import { Avatar, Cartao, Selo } from './ui';
-
-/** Cor da prioridade — verde = oportunidade, âmbar = atenção, vermelho = urgente. */
-function usarCorPrioridade(prioridade: Prioridade) {
-  const c = useCores();
-  if (prioridade === 'urgente') return { tinta: c.danger, fundo: c.dangerSoft, texto: 'Urgente' };
-  if (prioridade === 'atencao') return { tinta: c.warning, fundo: c.warningSoft, texto: 'Atenção' };
-  return { tinta: c.success, fundo: c.successSoft, texto: 'Oportunidade' };
-}
-
-const ICONE_MODULO = {
-  conversa: 'chatbubble-ellipses-outline',
-  tarefa: 'checkmark-circle-outline',
-  lead: 'person-outline',
-  automacao: 'flash-outline',
-} as const;
-
-/** Pendência da Central do Dia — origem, prioridade e o que precisa ser feito. */
-export function CartaoItemDoDia({ item, onPress }: { item: ItemDoDia; onPress?: () => void }) {
-  const c = useCores();
-  const p = usarCorPrioridade(item.prioridade);
-
-  return (
-    <Cartao onPress={onPress} padding={space[3]} style={{ gap: space[3] }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-        <View style={{ width: 3, alignSelf: 'stretch', borderRadius: 2, backgroundColor: p.tinta }} />
-        <Avatar iniciais={item.iniciais} tamanho={38} />
-        <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={{ color: c.inkNome, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>
-            {item.nome}
-          </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-            <Ionicons name={ICONE_MODULO[item.modulo]} size={12} color={c.textFaint} />
-            <Text numberOfLines={1} style={{ color: c.textMuted, fontSize: fontSize.sm, flex: 1 }}>
-              {item.tipo} · {item.quando}
-            </Text>
-          </View>
-        </View>
-        <Selo texto={p.texto} cor={p.tinta} fundo={p.fundo} />
-      </View>
-
-      <Text numberOfLines={2} style={{ color: c.textMuted, fontSize: fontSize.sm, lineHeight: 18 }}>
-        {item.detalhe}
-      </Text>
-    </Cartao>
-  );
-}
 
 /** Compromisso da agenda do dia. */
 export function CartaoCompromisso({ compromisso }: { compromisso: Compromisso }) {

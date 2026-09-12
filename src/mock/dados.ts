@@ -11,7 +11,6 @@ export type Canal = 'WhatsApp' | 'Instagram' | 'TikTok' | 'E-mail';
 
 export const usuario = {
   nome: 'Ana Ferreira',
-  primeiroNome: 'Ana',
   iniciais: 'AF',
   cargo: 'Gestora de tráfego',
   email: 'ana@empresademo.com.br',
@@ -19,74 +18,8 @@ export const usuario = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* Início — Central do Dia                                                    */
+/* Agenda                                                                     */
 /* -------------------------------------------------------------------------- */
-
-export type Prioridade = 'urgente' | 'atencao' | 'oportunidade';
-
-export type ItemDoDia = {
-  id: string;
-  iniciais: string;
-  nome: string;
-  tipo: string;
-  detalhe: string;
-  prioridade: Prioridade;
-  modulo: 'conversa' | 'tarefa' | 'lead' | 'automacao';
-  quando: string;
-};
-
-export const itensDoDia: ItemDoDia[] = [
-  {
-    id: 'i1',
-    iniciais: 'MA',
-    nome: 'Marcos Aurélio',
-    tipo: 'Conversa sem resposta',
-    detalhe: 'Perguntou o valor do pacote e não foi respondido.',
-    prioridade: 'urgente',
-    modulo: 'conversa',
-    quando: 'há 6 min',
-  },
-  {
-    id: 'i2',
-    iniciais: 'JP',
-    nome: 'Julia Prado',
-    tipo: 'Proposta parada',
-    detalhe: 'Proposta de R$ 2.100 sem retorno há 4 dias.',
-    prioridade: 'urgente',
-    modulo: 'lead',
-    quando: 'há 4 dias',
-  },
-  {
-    id: 'i3',
-    iniciais: 'BN',
-    nome: 'Beatriz Nogueira',
-    tipo: 'Tarefa atrasada',
-    detalhe: 'Enviar contrato revisado do Studio Beatriz.',
-    prioridade: 'atencao',
-    modulo: 'tarefa',
-    quando: 'vencia ontem',
-  },
-  {
-    id: 'i4',
-    iniciais: 'CD',
-    nome: 'Camila Duarte',
-    tipo: 'Lead novo',
-    detalhe: 'Entrou pelo Instagram e ainda não foi qualificada.',
-    prioridade: 'oportunidade',
-    modulo: 'lead',
-    quando: 'há 14 min',
-  },
-  {
-    id: 'i5',
-    iniciais: 'RF',
-    nome: 'Renata Farias',
-    tipo: 'Automação pausada',
-    detalhe: 'Fluxo "Boas-vindas Meta Ads" parou no passo 2.',
-    prioridade: 'atencao',
-    modulo: 'automacao',
-    quando: 'há 1h',
-  },
-];
 
 export type Compromisso = {
   id: string;
@@ -121,19 +54,6 @@ export const compromissosHoje: Compromisso[] = [
     com: 'Equipe interna',
     local: 'Sala 2',
     status: 'Pendente',
-  },
-];
-
-export const recomendacoes = [
-  {
-    id: 'r1',
-    titulo: 'Responda as 3 conversas paradas há mais de 2 horas',
-    motivo: 'Lead que espera mais de 1 hora converte 40% menos.',
-  },
-  {
-    id: 'r2',
-    titulo: 'Reative os 5 leads de Meta Ads sem contato',
-    motivo: 'Entraram esta semana e nunca saíram da primeira etapa.',
   },
 ];
 
@@ -408,6 +328,8 @@ export const etapasFunil: EtapaFunil[] = [
 /* -------------------------------------------------------------------------- */
 /* Tarefas                                                                    */
 /* -------------------------------------------------------------------------- */
+
+export type Prioridade = 'urgente' | 'atencao' | 'oportunidade';
 
 export type Tarefa = {
   id: string;

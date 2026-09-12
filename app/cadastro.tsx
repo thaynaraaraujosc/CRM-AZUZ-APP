@@ -53,7 +53,7 @@ export default function CadastroScreen() {
             <Campo rotulo="WhatsApp" placeholder="(00) 00000-0000" icone="logo-whatsapp" teclado="phone-pad" />
             <Campo rotulo="Senha" placeholder="Mínimo de 8 caracteres" icone="lock-closed-outline" seguro />
 
-            <Botao titulo="Criar conta" bloco onPress={() => router.replace('/(tabs)/inicio')} />
+            <Botao titulo="Criar conta" bloco onPress={() => router.replace('/(tabs)/conversas')} />
 
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
               <Text style={{ color: c.textMuted, fontSize: fontSize.sm }}>Já tem conta?</Text>
