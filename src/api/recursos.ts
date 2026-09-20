@@ -338,11 +338,10 @@ export const ORIGENS_DE_NEGOCIO = ['Instagram', 'TikTok', 'Meta Ads', 'Google Ad
  */
 export function criarNegocio(
   funis: Funil[],
-  funilId: string,
-  entrada: { nome: string; valor?: string; origem: string },
+  entrada: { nome: string; valor?: string; origem: string; etapaId: string },
 ) {
   const hoje = new Date().toISOString().slice(0, 10);
-  const novo = {
+  const card = {
     id: `negocio-${Date.now()}`,
     nome: entrada.nome,
     valor: entrada.valor?.trim() || '—',
@@ -351,17 +350,39 @@ export function criarNegocio(
     data: hoje,
   } as Funil['colunas'][number]['cards'][number];
 
-  const atualizados = funis.map((funil) => {
-    if (funil.id !== funilId) return funil;
-    return {
-      ...funil,
-      colunas: funil.colunas.map((coluna, i) =>
-        i === 0 ? { ...coluna, cards: [...coluna.cards, novo], total: coluna.cards.length + 1 } : coluna,
-      ),
-    };
-  });
+  const atualizados = funis.map((funil) => ({
+    ...funil,
+    colunas: funil.colunas.map((coluna) =>
+      coluna.id === entrada.etapaId
+        ? { ...coluna, cards: [...coluna.cards, card], total: coluna.cards.length + 1 }
+        : coluna,
+    ),
+  }));
 
   return chamar<unknown>('/api/funis', { metodo: 'PUT', corpo: atualizados });
+}
+
+/**
+ * Cria um funil com as quatro etapas padrão, igual ao CRM da web: um funil por responsável,
+ * chamado "Funil - <nome>".
+ */
+export function criarFunil(responsavel: string) {
+  const carimbo = Date.now();
+  return chamar<unknown>('/api/funis/estrutura', {
+    metodo: 'POST',
+    corpo: {
+      tipo: 'funil',
+      id: `funil-${carimbo}`,
+      nome: `Funil - ${responsavel}`,
+      responsavel,
+      etapas: [
+        { id: `novo-${carimbo}`, titulo: 'Novo' },
+        { id: `qualificado-${carimbo}`, titulo: 'Qualificado' },
+        { id: `proposta-${carimbo}`, titulo: 'Proposta' },
+        { id: `fechado-${carimbo}`, titulo: 'Fechado' },
+      ],
+    },
+  });
 }
 
 /** Cria uma etapa no fim do funil. Essa tem rota própria, que grava na hora. */

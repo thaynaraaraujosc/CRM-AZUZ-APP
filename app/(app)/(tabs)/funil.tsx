@@ -15,10 +15,19 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { negocioNaTela, type NegocioNaTela } from '@/api/adaptar';
-import { moverNegocio, useFunis } from '@/api/recursos';
+import {
+  criarEtapa,
+  criarFunil,
+  criarNegocio,
+  moverNegocio,
+  ORIGENS_DE_NEGOCIO,
+  useEquipe,
+  useFunis,
+} from '@/api/recursos';
 import { useAoPerderSessao } from '@/api/sessao';
 import type { ColunaFunil } from '@/api/tipos';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
+import { FolhaDeCriacao } from '@/components/FolhaDeCriacao';
 import {
   CabecalhoEtapa,
   CardNegocio,
@@ -26,7 +35,7 @@ import {
   LARGURA_COLUNA,
   MARGEM_QUADRO,
 } from '@/components/funil';
-import { BotaoIcone, Cabecalho, Chip } from '@/components/ui';
+import { BotaoIcone, Cabecalho, Campo, Chip, Secundario } from '@/components/ui';
 import { usePermissoes } from '@/api/permissoes';
 import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
@@ -78,6 +87,19 @@ export default function FunilScreen() {
   const [emArraste, setEmArraste] = useState<EmArraste>(null);
   const [etapaAlvo, setEtapaAlvo] = useState(-1);
   const [falhaAoMover, setFalhaAoMover] = useState<string | null>(null);
+
+  // As três criações do quadro: negócio (numa etapa), etapa nova e funil novo.
+  const [criando, setCriando] = useState<'negocio' | 'etapa' | 'funil' | null>(null);
+  const [etapaEscolhida, setEtapaEscolhida] = useState<string | null>(null);
+  const [nomeNegocio, setNomeNegocio] = useState('');
+  const [valorNegocio, setValorNegocio] = useState('');
+  const [origemNegocio, setOrigemNegocio] = useState<string>(ORIGENS_DE_NEGOCIO[0]);
+  const [nomeEtapa, setNomeEtapa] = useState('');
+  const [responsavelDoFunil, setResponsavelDoFunil] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const [falhaAoCriar, setFalhaAoCriar] = useState<string | null>(null);
+
+  const equipe = useEquipe(aoPerderSessao);
 
   const funis = dados ?? [];
   const funil = funis[funilAtivo];
@@ -174,6 +196,67 @@ export default function FunilScreen() {
     });
   }, [alvo, etapas, recarregar, rolagemAutomatica]);
 
+  function abrirNovoNegocio(etapaId?: string) {
+    setEtapaEscolhida(etapaId ?? etapas[0]?.id ?? null);
+    setNomeNegocio('');
+    setValorNegocio('');
+    setOrigemNegocio(ORIGENS_DE_NEGOCIO[0]);
+    setFalhaAoCriar(null);
+    setCriando('negocio');
+  }
+
+  async function salvarCriacao() {
+    setFalhaAoCriar(null);
+
+    try {
+      if (criando === 'negocio') {
+        if (!nomeNegocio.trim()) {
+          setFalhaAoCriar('Escreva o nome do negócio.');
+          return;
+        }
+        if (!etapaEscolhida) {
+          setFalhaAoCriar('Escolha a etapa.');
+          return;
+        }
+        setSalvando(true);
+        await criarNegocio(funis, {
+          nome: nomeNegocio.trim(),
+          valor: valorNegocio,
+          origem: origemNegocio,
+          etapaId: etapaEscolhida,
+        });
+      }
+
+      if (criando === 'etapa') {
+        if (!nomeEtapa.trim()) {
+          setFalhaAoCriar('Escreva o nome da etapa.');
+          return;
+        }
+        if (!funil) return;
+        setSalvando(true);
+        await criarEtapa(funil.id, nomeEtapa.trim());
+      }
+
+      if (criando === 'funil') {
+        if (!responsavelDoFunil) {
+          setFalhaAoCriar('Escolha quem responde por esse funil.');
+          return;
+        }
+        setSalvando(true);
+        await criarFunil(responsavelDoFunil);
+      }
+
+      setCriando(null);
+      setNomeEtapa('');
+      setResponsavelDoFunil('');
+      recarregar();
+    } catch (e) {
+      setFalhaAoCriar(e instanceof Error ? e.message : 'Não deu para gravar agora.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   const totalNegocios = etapas.reduce((soma, e) => soma + e.cards.length, 0);
   const valorTotal = etapas.reduce((soma, e) => soma + somaDaEtapa(e), 0);
 
@@ -237,7 +320,7 @@ export default function FunilScreen() {
             ? 'Carregando…'
             : `${totalNegocios} negócios abertos · R$ ${valorTotal.toLocaleString('pt-BR')} em jogo`
         }
-        acao={<BotaoIcone icone="add" cor={c.acaoTexto} fundo={c.acao} />}
+        acao={<BotaoIcone icone="add" cor={c.acaoTexto} fundo={c.acao} onPress={() => abrirNovoNegocio()} />}
       />
 
       <View style={{ backgroundColor: c.surface, paddingVertical: space[3] }}>
@@ -249,7 +332,14 @@ export default function FunilScreen() {
           {funis.map((f, i) => (
             <Chip key={f.id} texto={f.nome} ativo={i === funilAtivo} onPress={() => setFunilAtivo(i)} />
           ))}
-          <Chip texto="+ Novo funil" />
+          <Chip
+            texto="+ Novo funil"
+            onPress={() => {
+              setResponsavelDoFunil(equipe.dados?.[0]?.nome ?? '');
+              setFalhaAoCriar(null);
+              setCriando('funil');
+            }}
+          />
         </ScrollView>
       </View>
 
@@ -327,6 +417,7 @@ export default function FunilScreen() {
                   ) : null}
 
                   <Pressable
+                    onPress={() => abrirNovoNegocio(etapa.id)}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -350,6 +441,11 @@ export default function FunilScreen() {
           })}
 
           <Pressable
+            onPress={() => {
+              setNomeEtapa('');
+              setFalhaAoCriar(null);
+              setCriando('etapa');
+            }}
             style={{
               width: 150,
               borderRadius: radius.lg,
@@ -396,6 +492,79 @@ export default function FunilScreen() {
           </Text>
         </View>
       ) : null}
+
+      <FolhaDeCriacao
+        aberta={criando === 'negocio'}
+        titulo="Novo negócio"
+        descricao="Entra no funil já na etapa escolhida."
+        salvando={salvando}
+        erro={falhaAoCriar}
+        aoFechar={() => setCriando(null)}
+        aoSalvar={salvarCriacao}
+        rotuloSalvar="Criar negócio"
+      >
+        <Campo rotulo="Nome" placeholder="Nome do cliente ou da negociação" valor={nomeNegocio} aoMudar={setNomeNegocio} />
+        <Campo rotulo="Valor" placeholder="R$ 2.500" valor={valorNegocio} aoMudar={setValorNegocio} />
+
+        <View style={{ gap: space[2] }}>
+          <Secundario>Origem</Secundario>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
+            {ORIGENS_DE_NEGOCIO.map((o) => (
+              <Chip key={o} texto={o} ativo={origemNegocio === o} onPress={() => setOrigemNegocio(o)} />
+            ))}
+          </View>
+        </View>
+
+        <View style={{ gap: space[2] }}>
+          <Secundario>Etapa</Secundario>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
+            {etapas.map((e) => (
+              <Chip key={e.id} texto={e.titulo} ativo={etapaEscolhida === e.id} onPress={() => setEtapaEscolhida(e.id)} />
+            ))}
+          </View>
+        </View>
+      </FolhaDeCriacao>
+
+      <FolhaDeCriacao
+        aberta={criando === 'etapa'}
+        titulo="Nova etapa"
+        descricao={funil ? `Entra no fim do ${funil.nome}.` : undefined}
+        salvando={salvando}
+        erro={falhaAoCriar}
+        aoFechar={() => setCriando(null)}
+        aoSalvar={salvarCriacao}
+        rotuloSalvar="Criar etapa"
+      >
+        <Campo rotulo="Nome da etapa" placeholder="Proposta enviada" valor={nomeEtapa} aoMudar={setNomeEtapa} />
+      </FolhaDeCriacao>
+
+      <FolhaDeCriacao
+        aberta={criando === 'funil'}
+        titulo="Novo funil"
+        descricao="Nasce com as etapas Novo, Qualificado, Proposta e Fechado — as mesmas do CRM."
+        salvando={salvando}
+        erro={falhaAoCriar}
+        aoFechar={() => setCriando(null)}
+        aoSalvar={salvarCriacao}
+        rotuloSalvar="Criar funil"
+      >
+        <View style={{ gap: space[2] }}>
+          <Secundario>Responsável</Secundario>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
+            {(equipe.dados ?? []).map((m) => (
+              <Chip
+                key={m.id}
+                texto={m.nome}
+                ativo={responsavelDoFunil === m.nome}
+                onPress={() => setResponsavelDoFunil(m.nome)}
+              />
+            ))}
+          </View>
+          {(equipe.dados ?? []).length === 0 ? (
+            <Secundario>Nenhuma pessoa na equipe ainda. Convide alguém em Mais → Equipe.</Secundario>
+          ) : null}
+        </View>
+      </FolhaDeCriacao>
     </SafeAreaView>
   );
 }
