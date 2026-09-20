@@ -1,99 +1,164 @@
-import { ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BarraProgresso, Cabecalho, Cartao, Chip, Corpo, Indicador, Secundario, TituloSecao } from '@/components/ui';
-import { canaisDeTrafego } from '@/mock/dados';
+import {
+  custoPorLead,
+  investimentoEmTrafego,
+  leadsDeTrafego,
+  moeda,
+  percentual,
+  porOrigem,
+  roasMedio,
+} from '@/api/metricas';
 import { usePermissoes } from '@/api/permissoes';
+import { useCampanhas, useContatos } from '@/api/recursos';
+import { useAoPerderSessao } from '@/api/sessao';
+import { Carregando, FalhaAoCarregar } from '@/components/estados';
 import { TelaSemPermissao } from '@/components/TelaSemPermissao';
+import {
+  BarraProgresso,
+  Cabecalho,
+  Cartao,
+  Corpo,
+  Indicador,
+  ListaVazia,
+  Secundario,
+  Selo,
+  TituloSecao,
+} from '@/components/ui';
 import { useCorDaOrigem, useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
-
-const PERIODOS = ['7 dias', '30 dias', 'Este mês'];
 
 /** Origem paga x orgânica: quanto entrou, quanto custou e o retorno. */
 export default function TrafegoScreen() {
   const { pode } = usePermissoes();
   if (!pode('relatorios')) return <TelaSemPermissao titulo="Tráfego" modulo="relatórios" voltar={true} />;
 
+  return <Trafego />;
+}
+
+function Trafego() {
   const c = useCores();
   const corOrigem = useCorDaOrigem();
+  const aoPerderSessao = useAoPerderSessao();
+
+  const contatos = useContatos(aoPerderSessao);
+  const campanhas = useCampanhas(aoPerderSessao);
+
+  const lista = campanhas.dados ?? [];
+  const origens = porOrigem(contatos.dados ?? []);
+  const maiorOrigem = Math.max(1, ...origens.map((o) => o.quantidade));
+
+  const investido = investimentoEmTrafego(lista);
+  const leads = leadsDeTrafego(lista);
+
+  function recarregar() {
+    contatos.recarregar();
+    campanhas.recarregar();
+  }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
-      <Cabecalho titulo="Tráfego" sub="247 leads · R$ 7.300 investidos" voltar />
+      <Cabecalho
+        titulo="Tráfego"
+        sub={
+          lista.length > 0
+            ? `${leads} leads de anúncio · ${moeda(investido)} investidos`
+            : `${(contatos.dados ?? []).length} contatos no workspace`
+        }
+        voltar
+      />
 
-      <View style={{ backgroundColor: c.surface, paddingVertical: space[3] }}>
+      {contatos.erro ? (
+        <FalhaAoCarregar mensagem={contatos.erro} aoTentar={recarregar} />
+      ) : contatos.carregando && !contatos.dados ? (
+        <Carregando texto="Somando as origens" />
+      ) : (
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: space[2], paddingHorizontal: space[4] }}
+          contentContainerStyle={{ padding: space[4], paddingBottom: space[7], gap: space[5] }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={contatos.carregando} onRefresh={recarregar} tintColor={c.blue} />
+          }
         >
-          {PERIODOS.map((p, i) => (
-            <Chip key={p} texto={p} ativo={i === 1} />
-          ))}
-        </ScrollView>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{ padding: space[4], paddingBottom: space[7], gap: space[5] }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ flexDirection: 'row', gap: space[2] }}>
-          <Indicador numero="247" rotulo="Leads" />
-          <Indicador numero="R$ 35,90" rotulo="Custo por lead" />
-          <Indicador numero="4,2x" rotulo="ROAS" cor={c.success} />
-        </View>
-
-        <View style={{ gap: space[3] }}>
-          <TituloSecao titulo="Por canal" contagem={canaisDeTrafego.length} />
-
-          {canaisDeTrafego.map((canal) => (
-            <Cartao key={canal.nome} style={{ gap: space[3] }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-                <View
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: corOrigem(canal.nome) ?? c.textMuted,
-                  }}
+          {lista.length > 0 ? (
+            <>
+              <View style={{ flexDirection: 'row', gap: space[2] }}>
+                <Indicador numero={moeda(investido)} rotulo="Investido" />
+                <Indicador numero={leads} rotulo="Leads" cor={c.blue} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: space[2] }}>
+                <Indicador numero={moeda(custoPorLead(lista))} rotulo="Custo por lead" />
+                <Indicador
+                  numero={`${roasMedio(lista).toFixed(1).replace('.', ',')}x`}
+                  rotulo="ROAS médio"
+                  cor={c.success}
                 />
-                <Text style={{ flex: 1, color: c.ink, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>
-                  {canal.nome}
-                </Text>
-                <Text style={{ color: c.ink, fontSize: fontSize.md, fontWeight: fontWeight.bold }}>
-                  {canal.leads}
-                </Text>
-                <Secundario>leads</Secundario>
               </View>
 
-              <BarraProgresso valor={canal.share} cor={corOrigem(canal.nome) ?? c.textMuted} />
-
-              <View style={{ flexDirection: 'row', gap: space[5] }}>
-                <View>
-                  <Corpo style={{ fontWeight: fontWeight.bold }}>{canal.investimento}</Corpo>
-                  <Secundario>investido</Secundario>
-                </View>
-                <View>
-                  <Corpo style={{ fontWeight: fontWeight.bold }}>{canal.cpl}</Corpo>
-                  <Secundario>por lead</Secundario>
-                </View>
-                <View>
-                  <Corpo style={{ fontWeight: fontWeight.bold }}>{canal.roas}</Corpo>
-                  <Secundario>ROAS</Secundario>
-                </View>
+              <View style={{ gap: space[3] }}>
+                <TituloSecao titulo="Campanhas" contagem={lista.length} />
+                {lista.map((campanha) => (
+                  <Cartao key={campanha.nome} style={{ gap: space[3] }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+                      <View style={{ flex: 1 }}>
+                        <Corpo style={{ fontWeight: fontWeight.bold }} numberOfLines={2}>
+                          {campanha.nome}
+                        </Corpo>
+                        <Secundario>{campanha.sub}</Secundario>
+                      </View>
+                      <Selo
+                        texto={campanha.pausada ? 'Pausada' : campanha.roas}
+                        cor={campanha.pausada ? c.textMuted : c.success}
+                        fundo={campanha.pausada ? c.gray100 : c.successSoft}
+                      />
+                    </View>
+                    <BarraProgresso valor={campanha.barra} />
+                  </Cartao>
+                ))}
               </View>
+            </>
+          ) : (
+            <ListaVazia
+              icone="megaphone-outline"
+              titulo="Meta Ads não conectado"
+              descricao="Com a conta de anúncios ligada no CRM, investimento, custo por lead e ROAS aparecem aqui."
+            />
+          )}
+
+          <View style={{ gap: space[3] }}>
+            <TituloSecao titulo="De onde vêm os contatos" contagem={origens.length} />
+            <Cartao style={{ gap: space[4] }}>
+              {origens.length === 0 ? <Secundario>Nenhum contato ainda.</Secundario> : null}
+              {origens.map((o) => (
+                <View key={o.origem} style={{ gap: space[2] }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+                    <Text
+                      style={{
+                        flex: 1,
+                        color: corOrigem(o.origem),
+                        fontSize: fontSize.sm,
+                        fontWeight: fontWeight.bold,
+                        letterSpacing: 0.4,
+                      }}
+                    >
+                      {o.origem.toUpperCase()}
+                    </Text>
+                    <Text style={{ color: c.ink, fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>
+                      {o.quantidade}
+                    </Text>
+                    <Secundario>{percentual(o.percentual, 0)}</Secundario>
+                  </View>
+                  <BarraProgresso
+                    valor={Math.round((o.quantidade / maiorOrigem) * 100)}
+                    cor={corOrigem(o.origem)}
+                  />
+                </View>
+              ))}
             </Cartao>
-          ))}
-        </View>
-
-        <Cartao>
-          <Secundario>
-            Instagram e TikTok aparecem sem investimento porque são tráfego orgânico — o número de leads é real, o
-            custo não se aplica.
-          </Secundario>
-        </Cartao>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

@@ -10,7 +10,6 @@ import { LinhaContato } from '@/components/cards';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
 import { FolhaDeCriacao } from '@/components/FolhaDeCriacao';
 import { BarraBusca, BotaoIcone, Cabecalho, Campo, Chip, ListaVazia } from '@/components/ui';
-import { filtrosContatos } from '@/mock/dados';
 import { usePermissoes } from '@/api/permissoes';
 import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
@@ -26,6 +25,8 @@ export default function ContatosScreen() {
   const aoPerderSessao = useAoPerderSessao();
   const { dados, carregando, erro, recarregar } = useContatos(aoPerderSessao);
 
+  const [busca, setBusca] = useState('');
+  const [origemFiltro, setOrigemFiltro] = useState('Todos');
   const [criando, setCriando] = useState(false);
   const [nome, setNome] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
@@ -54,26 +55,48 @@ export default function ContatosScreen() {
     }
   }
 
-  const contatos = (dados ?? []).map(contatoNaTela);
+  const todos = dados ?? [];
+
+  /** As origens que existem de verdade nos contatos, mais "Favoritos" e "Todos". */
+  const origens = ['Todos', 'Favoritos', ...[...new Set(todos.map((ct) => ct.origem).filter(Boolean))]];
+
+  function combina(ct: (typeof todos)[number]): boolean {
+    if (origemFiltro === 'Favoritos' && !ct.favorito) return false;
+    if (origemFiltro !== 'Todos' && origemFiltro !== 'Favoritos' && ct.origem !== origemFiltro) return false;
+
+    const termo = busca.trim().toLowerCase();
+    if (!termo) return true;
+    return [ct.nome, ct.email, ct.whatsapp, ct.empresa, ct.etapa].some((campo) =>
+      campo?.toLowerCase().includes(termo),
+    );
+  }
+
+  const contatos = todos.filter(combina).map(contatoNaTela);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
       <Cabecalho
         titulo="Contatos"
-        sub={carregando ? 'Carregando…' : `${contatos.length} pessoas nesta visão`}
+        sub={
+          carregando
+            ? 'Carregando…'
+            : contatos.length === todos.length
+              ? `${todos.length} pessoas`
+              : `${contatos.length} de ${todos.length} pessoas`
+        }
         voltar
         acao={<BotaoIcone icone="person-add-outline" cor={c.acaoTexto} fundo={c.acao} onPress={() => setCriando(true)} />}
       />
 
       <View style={{ backgroundColor: c.surface, paddingHorizontal: space[4], paddingTop: space[3], gap: space[3] }}>
-        <BarraBusca placeholder="Buscar por nome, e-mail ou telefone" />
+        <BarraBusca placeholder="Buscar por nome, e-mail ou telefone" valor={busca} aoMudar={setBusca} />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: space[2], paddingBottom: space[3] }}
         >
-          {filtrosContatos.map((f, i) => (
-            <Chip key={f} texto={f} ativo={i === 0} />
+          {origens.map((f) => (
+            <Chip key={f} texto={f} ativo={origemFiltro === f} onPress={() => setOrigemFiltro(f)} />
           ))}
         </ScrollView>
       </View>

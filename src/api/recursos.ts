@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { chamar, ErroDeSessao } from './cliente';
+import type { Campanha } from './metricas';
 import type {
   ColunaTarefas,
   Compromisso,
@@ -217,6 +218,10 @@ export const useRelatorios = (aoPerderSessao?: () => void) =>
 
 export const useMotivosDePerda = (aoPerderSessao?: () => void) =>
   useRecurso<string[]>('/api/motivos-perda', aoPerderSessao);
+
+/** Campanhas do Meta Ads. Sem Meta Ads conectado, a rota responde 404 e a tela diz isso. */
+export const useCampanhas = (aoPerderSessao?: () => void) =>
+  useRecurso<Campanha[]>('/api/integracoes/meta/ads/campanhas', aoPerderSessao);
 
 /** Estado de uma integração (Instagram, Meta Ads…). `/api/canais` cobre só os canais de envio. */
 export const useIntegracao = (provedor: string, aoPerderSessao?: () => void) =>
