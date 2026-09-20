@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { chamar, ErroDeSessao } from './cliente';
-import type { Contato, Conversa, Funil, MembroDaEquipe, Mensagem } from './tipos';
+import type { Contato, Conversa, Funil, HistoricoDeMensagens, MembroDaEquipe } from './tipos';
 
 /** Estado de uma busca: o suficiente para a tela mostrar carregando, erro ou dado. */
 export type Busca<T> = {
@@ -58,8 +58,15 @@ function useRecurso<T>(caminho: string, aoPerderSessao?: () => void): Busca<T> {
 export const useConversas = (aoPerderSessao?: () => void) =>
   useRecurso<Conversa[]>('/api/conversas', aoPerderSessao);
 
-export const useMensagens = (conversaId: string, aoPerderSessao?: () => void) =>
-  useRecurso<Mensagem[]>(`/api/conversas/${conversaId}`, aoPerderSessao);
+/**
+ * Histórico de mensagens do workspace, agrupado por nome de contato.
+ *
+ * Não existe rota "mensagens desta conversa": o CRM entrega tudo de uma vez e cada tela pega a
+ * parte que interessa. Foi assim que o web nasceu, e o app segue o mesmo caminho para não precisar
+ * de rota nova no servidor.
+ */
+export const useHistoricoDeMensagens = (aoPerderSessao?: () => void) =>
+  useRecurso<HistoricoDeMensagens>('/api/mensagens-extra', aoPerderSessao);
 
 export const useFunis = (aoPerderSessao?: () => void) => useRecurso<Funil[]>('/api/funis', aoPerderSessao);
 
@@ -68,6 +75,19 @@ export const useContatos = (aoPerderSessao?: () => void) =>
 
 export const useEquipe = (aoPerderSessao?: () => void) =>
   useRecurso<MembroDaEquipe[]>('/api/equipe', aoPerderSessao);
+
+/**
+ * Manda um texto numa conversa. O canal é escolhido pelo servidor, a partir da própria conversa.
+ *
+ * A chave é o NOME da conversa, não o id — é o que a rota espera, e é também como o histórico
+ * vem agrupado.
+ */
+export function enviarMensagem(conversaNome: string, texto: string) {
+  return chamar<{ ok: boolean }>('/api/conversas/enviar', {
+    metodo: 'POST',
+    corpo: { conversaNome, texto },
+  });
+}
 
 /** Move um negócio de etapa. Mesma rota que o painel web usa ao arrastar um card. */
 export function moverNegocio(cardId: string, etapaId: string) {

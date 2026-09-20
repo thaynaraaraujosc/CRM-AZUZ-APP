@@ -18,8 +18,15 @@ Isso esconde a tela, não protege o dado. O `proxy.ts` do CRM só aplica essas r
 em `/api`, e o app só fala com a API. A correção definitiva é o CRM conferir assinatura e permissão
 também nas rotas de API.
 
-Ligadas na API de verdade: **login e sessão**, **Conversas**, **Funil** (inclusive gravar o card
-movido em `/api/funis/mover`), **Contatos**, **Equipe**, e o perfil no menu.
+Ligadas na API de verdade: **login e sessão**, **Conversas** (histórico em `/api/mensagens-extra` e
+envio em `/api/conversas/enviar`), **Funil** (inclusive gravar o card movido em
+`/api/funis/mover`), **Contatos**, **Equipe**, e o perfil no menu.
+
+**Atualização pelo ar.** O `expo-updates` está instalado e configurado com `runtimeVersion` pela
+versão do app, então correção de tela chega sem passar pela loja. Falta um passo, que só pode ser
+feito com a conta do EAS conectada: rodar `eas update:configure`, que grava o endereço das
+atualizações e o id do projeto no `app.json`. Sem isso o app funciona normalmente, só não busca
+atualização.
 
 Ainda em conteúdo estático (`src/mock/dados.ts`): Tarefas, Agenda, Automações, Formulários,
 Documentos, Azuz IA, Inteligência comercial, Configurações e as telas de detalhe de conversa,

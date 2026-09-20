@@ -49,8 +49,17 @@ export type Mensagem = {
   tipo: 'in' | 'out' | 'system';
   texto: string;
   hora: string;
+  /** Instante real em milissegundos; `hora` é só o rótulo já formatado pelo servidor. */
+  criadoEm?: number;
   status?: string;
+  canal?: string;
 };
+
+/**
+ * `/api/mensagens-extra` devolve o histórico do workspace inteiro de uma vez, agrupado pelo NOME
+ * do contato — não pelo id da conversa. É o mesmo formato que o painel web consome.
+ */
+export type HistoricoDeMensagens = Record<string, Mensagem[]>;
 
 export type NegocioCard = {
   id: string;
