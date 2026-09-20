@@ -1,4 +1,5 @@
-import { URL_DA_API } from './config';
+import { MODO_DEMO, URL_DA_API } from './config';
+import { respostaDemo } from '@/mock/demo';
 
 /**
  * Cliente HTTP do CRM.
@@ -44,6 +45,11 @@ function ehRespostaDeLogin(resposta: Response): boolean {
 
 export async function chamar<T>(caminho: string, opcoes: Opcoes = {}): Promise<T> {
   const { metodo = 'GET', corpo, formulario } = opcoes;
+
+  if (MODO_DEMO) {
+    const demo = respostaDemo(caminho);
+    if (demo !== undefined) return demo as T;
+  }
 
   const cabecalhos: Record<string, string> = { Accept: 'application/json' };
   let body: string | undefined;
@@ -93,6 +99,8 @@ export async function chamar<T>(caminho: string, opcoes: Opcoes = {}): Promise<T
  * sessão na resposta — quem confirma se deu certo é `/api/auth/session`, logo depois.
  */
 export async function entrarNoCrm(email: string, senha: string): Promise<void> {
+  if (MODO_DEMO) return;
+
   const { csrfToken } = await chamar<{ csrfToken: string }>('/api/auth/csrf');
 
   await fetch(`${URL_DA_API}/api/auth/callback/credentials`, {
@@ -106,6 +114,8 @@ export async function entrarNoCrm(email: string, senha: string): Promise<void> {
 }
 
 export async function sairDoCrm(): Promise<void> {
+  if (MODO_DEMO) return;
+
   const { csrfToken } = await chamar<{ csrfToken: string }>('/api/auth/csrf');
   await fetch(`${URL_DA_API}/api/auth/signout`, {
     method: 'POST',
