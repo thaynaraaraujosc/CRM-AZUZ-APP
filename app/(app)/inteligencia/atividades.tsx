@@ -3,11 +3,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, BarraProgresso, Cabecalho, Cartao, Corpo, Indicador, Secundario, TituloSecao } from '@/components/ui';
 import { atividadesPorVendedor } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 
 /** Esforço comercial por pessoa — quantidade de contato, não resultado. */
 export default function AtividadesScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('relatorios')) return <TelaSemPermissao titulo="Atividades" modulo="relatórios" voltar={true} />;
+
   const c = useCores();
 
   const ligacoes = atividadesPorVendedor.reduce((s, v) => s + v.ligacoes, 0);

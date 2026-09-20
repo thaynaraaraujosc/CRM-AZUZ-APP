@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TagOrigem } from '@/components/funil';
 import { Avatar, Cabecalho, Cartao, Corpo, Divisor, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { contatos } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -18,6 +20,9 @@ const LINHA_DO_TEMPO = [
 
 /** Ficha do contato: identidade, dados, contexto comercial e histórico. */
 export default function ContatoScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('contatos')) return <TelaSemPermissao titulo="Contato" modulo="contatos" voltar={true} />;
+
   const c = useCores();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();

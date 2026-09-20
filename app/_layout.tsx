@@ -42,8 +42,7 @@ function Navegacao() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="login" options={{ animation: 'fade' }} />
-        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-        <Stack.Screen name="notificacoes" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="(app)" options={{ animation: 'fade' }} />
       </Stack>
     </>
   );

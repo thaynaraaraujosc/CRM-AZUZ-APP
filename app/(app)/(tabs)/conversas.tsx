@@ -8,6 +8,8 @@ import { useAoPerderSessao } from '@/api/sessao';
 import { LinhaConversa } from '@/components/cards';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
 import { BarraBusca, BotaoIcone, Cabecalho, Chip, ListaVazia } from '@/components/ui';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { space } from '@/theme/tokens';
 
@@ -21,6 +23,9 @@ const FILTROS = ['Todas', 'Não lidas', 'Minhas', 'Sem responsável', 'WhatsApp'
  * escondia os outros três de quem procurava.
  */
 export default function ConversasScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('conversas')) return <TelaSemPermissao titulo="Conversas" modulo="conversas" voltar={false} />;
+
   const c = useCores();
   const router = useRouter();
   const aoPerderSessao = useAoPerderSessao();

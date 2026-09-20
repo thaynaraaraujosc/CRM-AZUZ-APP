@@ -15,6 +15,16 @@ export type SessaoDoUsuario = {
   workspaceNome?: string;
   workspaceId?: string;
   superAdmin?: boolean;
+  /** "admin" é o dono do workspace, que enxerga tudo. */
+  papelTipo?: string;
+  permissoes?: string[];
+};
+
+/** `/api/assinatura` — só "ativa" libera o uso; sem assinatura também é bloqueio. */
+export type StatusDaAssinatura = 'pendente' | 'ativa' | 'atrasada' | 'cancelada';
+
+export type RespostaDeAssinatura = {
+  assinatura: { status: StatusDaAssinatura; plano?: string; proximoVencimento?: string | null } | null;
 };
 
 export type RespostaDeSessao = { user?: SessaoDoUsuario; expires?: string };

@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Interruptor } from '@/components/Interruptor';
 import { Avatar, Botao, Cabecalho, Cartao, Corpo, Divisor, LinhaMenu, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { equipe } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontWeight, space } from '@/theme/tokens';
 
@@ -14,6 +16,9 @@ const SESSOES = [
 
 /** Senha, dupla verificação, sessões abertas e quem tem qual papel. */
 export default function SegurancaScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('configuracoes')) return <TelaSemPermissao titulo="Segurança" modulo="configurações" voltar={true} />;
+
   const c = useCores();
 
   return (

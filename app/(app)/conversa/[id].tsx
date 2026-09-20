@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TagOrigem } from '@/components/funil';
 import { Avatar, Chip, Selo } from '@/components/ui';
 import { conversas, mensagens } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -22,6 +24,9 @@ const ACOES_RAPIDAS = ['Atribuir ao funil', 'Criar tarefa', 'Marcar como resolvi
 
 /** Conversa aberta — bolhas, ações rápidas do CRM e a barra de composição. */
 export default function ConversaScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('conversas')) return <TelaSemPermissao titulo="Conversa" modulo="conversas" voltar={true} />;
+
   const c = useCores();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();

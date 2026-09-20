@@ -3,6 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Interruptor } from '@/components/Interruptor';
 import { Cabecalho, Cartao, Divisor, LinhaMenu, Secundario, TituloSecao } from '@/components/ui';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { space } from '@/theme/tokens';
 
@@ -21,6 +23,9 @@ const POR_EMAIL = [
 
 /** O que o CRM avisa, e por onde. */
 export default function NotificacoesConfigScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('configuracoes')) return <TelaSemPermissao titulo="Notificações" modulo="configurações" voltar={true} />;
+
   const c = useCores();
 
   return (

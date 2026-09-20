@@ -4,11 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BotaoIcone, Cabecalho, Cartao, Corpo, Indicador, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { formularios } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /** Formulários de captação: quantas respostas chegaram e o que virou lead. */
 export default function FormulariosScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('formularios')) return <TelaSemPermissao titulo="Formulários" modulo="formulários" voltar={true} />;
+
   const c = useCores();
   const total = formularios.reduce((soma, f) => soma + f.respostas, 0);
 

@@ -3,6 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BarraProgresso, Cabecalho, Cartao, Corpo, Indicador, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { motivosDePerda } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 
@@ -14,6 +16,9 @@ const PERDIDOS = [
 
 /** Por que os negócios não fecharam — o campo é obrigatório ao marcar perdido no funil. */
 export default function MotivosPerdaScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('relatorios')) return <TelaSemPermissao titulo="Motivos de perda" modulo="relatórios" voltar={true} />;
+
   const c = useCores();
   const total = motivosDePerda.reduce((s, m) => s + m.total, 0);
 

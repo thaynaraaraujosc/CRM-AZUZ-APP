@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Botao, BotaoIcone, Cabecalho, Cartao, Chip, Corpo, Divisor, Secundario, TituloSecao } from '@/components/ui';
 import { relatorios } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -16,6 +18,9 @@ const MODELOS = [
 
 /** Relatórios já gerados e os modelos disponíveis para gerar um novo. */
 export default function RelatoriosScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('relatorios')) return <TelaSemPermissao titulo="Relatórios" modulo="relatórios" voltar={true} />;
+
   const c = useCores();
 
   return (

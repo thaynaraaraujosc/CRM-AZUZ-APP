@@ -27,6 +27,8 @@ import {
   MARGEM_QUADRO,
 } from '@/components/funil';
 import { BotaoIcone, Cabecalho, Chip } from '@/components/ui';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -62,6 +64,9 @@ function paraTela(colunas: ColunaFunil[]): EtapaNaTela[] {
  * funcionar numa tela onde só cabe uma coluna e meia.
  */
 export default function FunilScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('funil')) return <TelaSemPermissao titulo="Funil" modulo="o funil" voltar={false} />;
+
   const c = useCores();
   const router = useRouter();
 

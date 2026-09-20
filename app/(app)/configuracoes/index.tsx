@@ -3,6 +3,8 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Cabecalho, Cartao, Divisor, LinhaMenu, Selo, TituloSecao } from '@/components/ui';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { space } from '@/theme/tokens';
 
@@ -11,6 +13,9 @@ import { space } from '@/theme/tokens';
  * vira esta lista e cada categoria abre a própria tela.
  */
 export default function ConfiguracoesScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('configuracoes')) return <TelaSemPermissao titulo="Configurações" modulo="configurações" voltar={true} />;
+
   const c = useCores();
   const router = useRouter();
 

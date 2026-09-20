@@ -2,13 +2,24 @@ import { useRouter } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { chamar, entrarNoCrm, ErroDaApi, sairDoCrm } from './cliente';
-import type { RespostaDeSessao, SessaoDoUsuario } from './tipos';
+import type { RespostaDeAssinatura, RespostaDeSessao, SessaoDoUsuario } from './tipos';
 
 type Estado = 'verificando' | 'dentro' | 'fora';
+
+/**
+ * Situação da assinatura do workspace de quem entrou.
+ *
+ * `indefinida` é o estado enquanto a resposta não chegou, e também quando a consulta falha por
+ * rede. Falha de rede não pode bloquear: derrubaria quem está em dia por causa de um sinal ruim.
+ */
+type Assinatura = 'indefinida' | 'ativa' | 'bloqueada';
 
 type SessaoContexto = {
   estado: Estado;
   usuario: SessaoDoUsuario | null;
+  assinatura: Assinatura;
+  /** Refaz a consulta da assinatura — usado pelo botão "Tentar de novo" da tela de bloqueio. */
+  reconferirAssinatura: () => void;
   entrar: (email: string, senha: string) => Promise<{ ok: boolean; erro?: string }>;
   sair: () => Promise<void>;
   /** Chamado pelas telas quando a API responde que a sessão morreu. */
@@ -27,6 +38,28 @@ const Contexto = createContext<SessaoContexto | null>(null);
 export function SessaoProvider({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<Estado>('verificando');
   const [usuario, setUsuario] = useState<SessaoDoUsuario | null>(null);
+  const [assinatura, setAssinatura] = useState<Assinatura>('indefinida');
+
+  /**
+   * Confere a assinatura no servidor, não na sessão.
+   *
+   * O status muda por webhook da Asaas, fora do controle de quando o token da sessão foi emitido,
+   * então cache de sessão não serve. É a mesma consulta que o `proxy.ts` do web faz a cada
+   * navegação.
+   */
+  const conferirAssinatura = useCallback(async (dono: SessaoDoUsuario | null) => {
+    if (dono?.superAdmin) {
+      setAssinatura('ativa');
+      return;
+    }
+    try {
+      const resposta = await chamar<RespostaDeAssinatura>('/api/assinatura');
+      setAssinatura(resposta?.assinatura?.status === 'ativa' ? 'ativa' : 'bloqueada');
+    } catch {
+      // Sem resposta não dá para afirmar que está devendo. Deixa passar e tenta de novo depois.
+      setAssinatura('indefinida');
+    }
+  }, []);
 
   const conferir = useCallback(async () => {
     try {
@@ -34,6 +67,7 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       if (sessao?.user?.email) {
         setUsuario(sessao.user);
         setEstado('dentro');
+        void conferirAssinatura(sessao.user);
         return true;
       }
     } catch {
@@ -41,8 +75,9 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     }
     setUsuario(null);
     setEstado('fora');
+    setAssinatura('indefinida');
     return false;
-  }, []);
+  }, [conferirAssinatura]);
 
   useEffect(() => {
     void conferir();
@@ -70,16 +105,23 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     await sairDoCrm();
     setUsuario(null);
     setEstado('fora');
+    setAssinatura('indefinida');
   }, []);
 
   const expirou = useCallback(() => {
     setUsuario(null);
     setEstado('fora');
+    setAssinatura('indefinida');
   }, []);
 
+  const reconferirAssinatura = useCallback(() => {
+    setAssinatura('indefinida');
+    void conferirAssinatura(usuario);
+  }, [conferirAssinatura, usuario]);
+
   const valor = useMemo<SessaoContexto>(
-    () => ({ estado, usuario, entrar, sair, expirou }),
-    [estado, usuario, entrar, sair, expirou],
+    () => ({ estado, usuario, assinatura, entrar, sair, expirou, reconferirAssinatura }),
+    [estado, usuario, assinatura, entrar, sair, expirou, reconferirAssinatura],
   );
 
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;

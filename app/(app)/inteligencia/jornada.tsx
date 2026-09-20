@@ -4,11 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Cabecalho, Cartao, Corpo, Indicador, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { etapasJornada } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /** Quanto tempo o lead passa em cada etapa, e onde ele empaca. */
 export default function JornadaScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('relatorios')) return <TelaSemPermissao titulo="Jornada do cliente" modulo="relatórios" voltar={true} />;
+
   const c = useCores();
 
   return (

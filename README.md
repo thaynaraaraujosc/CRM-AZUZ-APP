@@ -9,6 +9,15 @@ só para ele. A sessão é o cookie do Auth.js: o aparelho guarda esse cookie so
 login uma vez e as chamadas seguintes já vão assinadas. Trocar de ambiente é definir
 `EXPO_PUBLIC_API_URL`.
 
+**Quem entra.** O app confere duas coisas antes de abrir qualquer tela: a assinatura do workspace
+em `/api/assinatura`, onde só "ativa" libera, e as permissões de módulo que já vêm na sessão. Sem
+assinatura em dia aparece a tela de acesso suspenso; sem permissão, o módulo some do menu e da
+barra. Os dois portões ficam no layout do grupo `app/(app)`, que embrulha toda a área logada.
+
+Isso esconde a tela, não protege o dado. O `proxy.ts` do CRM só aplica essas regras em página, não
+em `/api`, e o app só fala com a API. A correção definitiva é o CRM conferir assinatura e permissão
+também nas rotas de API.
+
 Ligadas na API de verdade: **login e sessão**, **Conversas**, **Funil** (inclusive gravar o card
 movido em `/api/funis/mover`), **Contatos**, **Equipe**, e o perfil no menu.
 

@@ -9,11 +9,16 @@ import { LinhaContato } from '@/components/cards';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
 import { BarraBusca, BotaoIcone, Cabecalho, Chip, ListaVazia } from '@/components/ui';
 import { filtrosContatos } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { space } from '@/theme/tokens';
 
 /** Base de contatos do workspace, lendo `/api/contatos`. */
 export default function ContatosScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('contatos')) return <TelaSemPermissao titulo="Contatos" modulo="contatos" voltar={true} />;
+
   const c = useCores();
   const router = useRouter();
   const aoPerderSessao = useAoPerderSessao();

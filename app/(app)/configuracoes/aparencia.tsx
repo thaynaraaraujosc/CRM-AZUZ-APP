@@ -3,6 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Cabecalho, Cartao, Corpo, Secundario, TituloSecao } from '@/components/ui';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useTema } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -14,6 +16,9 @@ const OPCOES = [
 
 /** A única tela do app que muda algo de verdade: o tema. O resto ainda é só desenho. */
 export default function AparenciaScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('configuracoes')) return <TelaSemPermissao titulo="Aparência" modulo="configurações" voltar={true} />;
+
   const { cores: c, modo, setModo } = useTema();
 
   return (

@@ -3,6 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BarraProgresso, Cabecalho, Cartao, Chip, Corpo, Indicador, Secundario, TituloSecao } from '@/components/ui';
 import { canaisDeTrafego } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCorDaOrigem, useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, space } from '@/theme/tokens';
 
@@ -10,6 +12,9 @@ const PERIODOS = ['7 dias', '30 dias', 'Este mês'];
 
 /** Origem paga x orgânica: quanto entrou, quanto custou e o retorno. */
 export default function TrafegoScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('relatorios')) return <TelaSemPermissao titulo="Tráfego" modulo="relatórios" voltar={true} />;
+
   const c = useCores();
   const corOrigem = useCorDaOrigem();
 

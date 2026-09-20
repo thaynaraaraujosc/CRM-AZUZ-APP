@@ -31,7 +31,7 @@ export default function LoginScreen() {
   const [entrando, setEntrando] = useState(false);
 
   useEffect(() => {
-    if (estado === 'dentro') router.replace('/(tabs)/conversas');
+    if (estado === 'dentro') router.replace('/conversas');
   }, [estado, router]);
 
   async function enviar() {

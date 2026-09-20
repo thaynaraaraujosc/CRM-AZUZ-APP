@@ -6,11 +6,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TagOrigem } from '@/components/funil';
 import { Avatar, Botao, Cabecalho, Cartao, Chip, Corpo, Divisor, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { etapasFunil } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /** Negócio aberto — valor, etapa atual, responsável e o que já aconteceu nele. */
 export default function NegocioScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('funil')) return <TelaSemPermissao titulo="Negócio" modulo="o funil" voltar={true} />;
+
   const c = useCores();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();

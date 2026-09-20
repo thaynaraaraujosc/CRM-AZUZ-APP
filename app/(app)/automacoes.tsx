@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BotaoIcone, Cabecalho, Cartao, Chip, Corpo, Indicador, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { automacoes } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -11,6 +13,9 @@ const ABAS = ['Fluxos', 'Disparos', 'Modelos'];
 
 /** Fluxos automáticos: gatilho, quantidade de passos e se estão rodando. */
 export default function AutomacoesScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('automacoes')) return <TelaSemPermissao titulo="Automações" modulo="automações" voltar={true} />;
+
   const c = useCores();
   const ativas = automacoes.filter((a) => a.ativa).length;
 

@@ -3,6 +3,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, BarraProgresso, Cabecalho, Cartao, GraficoBarras, Indicador, Secundario, TituloSecao } from '@/components/ui';
 import { funilDoMes, leadsPorDia } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -14,6 +16,9 @@ const RANKING = [
 
 /** Conversão por etapa e ranking de vendas realizadas. */
 export default function PerformanceScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('relatorios')) return <TelaSemPermissao titulo="Performance" modulo="relatórios" voltar={true} />;
+
   const c = useCores();
 
   return (

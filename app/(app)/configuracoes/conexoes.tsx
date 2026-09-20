@@ -4,6 +4,8 @@ import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Botao, Cabecalho, Cartao, Corpo, Secundario, Selo, TituloSecao } from '@/components/ui';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -33,6 +35,9 @@ const INTEGRACOES: Conexao[] = [
 
 /** Canais de atendimento e integrações externas, com o estado de cada um. */
 export default function ConexoesScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('configuracoes')) return <TelaSemPermissao titulo="Canais e integrações" modulo="configurações" voltar={true} />;
+
   const c = useCores();
 
   function cor(estado: Conexao['estado']) {

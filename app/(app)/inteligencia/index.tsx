@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Cabecalho, Cartao, Chip, Divisor, GraficoBarras, Indicador, LinhaMenu, Secundario, TituloSecao } from '@/components/ui';
 import { kpisInicio, leadsPorDia } from '@/mock/dados';
+import { usePermissoes } from '@/api/permissoes';
+import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { space } from '@/theme/tokens';
 
@@ -14,6 +16,9 @@ const PERIODOS = ['Hoje', '7 dias', '30 dias', 'Este mês', 'Personalizado'];
  * em vez de espalhados pelo menu — mesma organização do web.
  */
 export default function InteligenciaScreen() {
+  const { pode } = usePermissoes();
+  if (!pode('relatorios')) return <TelaSemPermissao titulo="Inteligência comercial" modulo="relatórios" voltar={true} />;
+
   const c = useCores();
   const router = useRouter();
 

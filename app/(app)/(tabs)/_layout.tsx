@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Tabs } from 'expo-router';
+import { StyleSheet } from 'react-native';
 
-import { useSessao } from '@/api/sessao';
+import { usePermissoes } from '@/api/permissoes';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight } from '@/theme/tokens';
 
@@ -16,19 +16,10 @@ import { fontSize, fontWeight } from '@/theme/tokens';
  */
 export default function TabsLayout() {
   const c = useCores();
-  const { estado } = useSessao();
+  const { pode } = usePermissoes();
 
-  // A área logada não monta sem sessão: assim nenhuma tela dispara chamada que já se sabe que vai
-  // voltar como "não autenticado", e a pessoa não vê quatro erros antes de cair no login.
-  if (estado === 'verificando') {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.canvas }}>
-        <ActivityIndicator color={c.blue} />
-      </View>
-    );
-  }
-  if (estado === 'fora') return <Redirect href="/login" />;
-
+  // Aba de módulo que o papel da pessoa não inclui some da barra (`href: null`), em vez de abrir
+  // numa tela de erro. Sessão e assinatura são conferidas um nível acima, em `(app)/_layout`.
   return (
     <Tabs
       screenOptions={{
@@ -53,6 +44,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="conversas"
         options={{
+          href: pode('conversas') ? undefined : null,
           title: 'Conversas',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={21} color={color} />
@@ -62,6 +54,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="funil"
         options={{
+          href: pode('funil') ? undefined : null,
           title: 'Funil',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'git-branch' : 'git-branch-outline'} size={21} color={color} />
