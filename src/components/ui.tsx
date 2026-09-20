@@ -472,16 +472,19 @@ export function Chip({
   ativo = false,
   onPress,
   cor,
+  desabilitado = false,
 }: {
   texto: string;
   ativo?: boolean;
   onPress?: () => void;
   cor?: string;
+  desabilitado?: boolean;
 }) {
   const c = useCores();
   return (
     <Pressable
-      onPress={onPress}
+      onPress={desabilitado ? undefined : onPress}
+      disabled={desabilitado}
       style={({ pressed }) => ({
         paddingHorizontal: space[3],
         height: 32,
@@ -490,6 +493,7 @@ export function Chip({
         backgroundColor: ativo ? c.acao : pressed ? c.surfaceHover : 'transparent',
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: ativo ? c.acaoBorda : 'transparent',
+        opacity: desabilitado ? 0.45 : 1,
       })}
     >
       <Text

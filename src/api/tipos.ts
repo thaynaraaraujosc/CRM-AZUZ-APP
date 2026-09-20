@@ -40,6 +40,7 @@ export type Conversa = {
   origem: Origem;
   naoLidas?: number;
   favorita?: boolean;
+  arquivada?: boolean;
   responsavel?: string | null;
   criadoEm?: number;
 };

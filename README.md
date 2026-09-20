@@ -22,11 +22,12 @@ Ligadas na API de verdade: **login e sessão**, **Conversas** (histórico em `/a
 envio em `/api/conversas/enviar`), **Funil** (inclusive gravar o card movido em
 `/api/funis/mover`), **Contatos**, **Equipe**, e o perfil no menu.
 
-**Atualização pelo ar.** O `expo-updates` está instalado e configurado com `runtimeVersion` pela
-versão do app, então correção de tela chega sem passar pela loja. Falta um passo, que só pode ser
-feito com a conta do EAS conectada: rodar `eas update:configure`, que grava o endereço das
-atualizações e o id do projeto no `app.json`. Sem isso o app funciona normalmente, só não busca
-atualização.
+**Atualização pelo ar.** O pacote `expo-updates` está instalado, mas a configuração dele **não**
+fica no `app.json` durante o desenvolvimento: `runtimeVersion` próprio faz o Expo Go recusar o
+projeto, e a mensagem que ele mostra é enganosa ("you need to be signed in"). Rode
+`eas update:configure` na hora de gerar o primeiro build — ele grava `runtimeVersion`, o endereço
+das atualizações e o id do projeto de uma vez. Para voltar a testar no Expo Go depois, remova essas
+chaves de novo.
 
 Ainda em conteúdo estático (`src/mock/dados.ts`): Tarefas, Agenda, Automações, Formulários,
 Documentos, Azuz IA, Inteligência comercial, Configurações e as telas de detalhe de conversa,
