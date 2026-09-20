@@ -160,3 +160,14 @@ export type Compromisso = {
   status: string;
   origem: string;
 };
+
+/** Evento da linha do tempo do contato (`/api/contatos/linha-do-tempo?contato=<nome>`). */
+export type EventoDoContato = {
+  id: string;
+  tipo: string;
+  canal?: string | null;
+  descricao: string;
+  criadoEm: string;
+};
+
+export type RespostaLinhaDoTempo = { eventos: EventoDoContato[] };

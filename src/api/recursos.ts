@@ -9,6 +9,7 @@ import type {
   Funil,
   HistoricoDeMensagens,
   MembroDaEquipe,
+  RespostaLinhaDoTempo,
 } from './tipos';
 
 /** Estado de uma busca: o suficiente para a tela mostrar carregando, erro ou dado. */
@@ -32,6 +33,13 @@ function useRecurso<T>(caminho: string, aoPerderSessao?: () => void): Busca<T> {
   const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
+    // Caminho vazio quer dizer "ainda não sei o que buscar" — por exemplo, a linha do tempo antes
+    // de o contato ter carregado. Sem isto a chamada iria para a raiz do site.
+    if (!caminho) {
+      setCarregando(false);
+      return;
+    }
+
     let vivo = true;
     setCarregando(true);
     setErro(null);
@@ -89,6 +97,47 @@ export const useTarefas = (aoPerderSessao?: () => void) =>
 
 export const useAgenda = (aoPerderSessao?: () => void) =>
   useRecurso<Compromisso[]>('/api/agenda', aoPerderSessao);
+
+/** Histórico do lead. A chave é o NOME do contato, como no resto do CRM. */
+export const useLinhaDoTempo = (nome: string | undefined, aoPerderSessao?: () => void) =>
+  useRecurso<RespostaLinhaDoTempo>(
+    nome ? `/api/contatos/linha-do-tempo?contato=${encodeURIComponent(nome)}` : '',
+    aoPerderSessao,
+  );
+
+/**
+ * Marca um negócio como ganho ou perdido.
+ *
+ * Não existe rota dedicada para isso: o painel web altera o funil inteiro e o grava de uma vez
+ * (`PUT /api/funis`), e o app faz igual, mandando de volta a lista completa que acabou de ler.
+ * É pesado, mas inventar meio caminho aqui deixaria app e web gravando de formas diferentes.
+ */
+export function marcarDesfecho(
+  funis: Funil[],
+  cardId: string,
+  statusFechamento: 'ganho' | 'perdido' | null,
+  motivoPerda?: string | null,
+) {
+  const hoje = new Date().toISOString().slice(0, 10);
+  const atualizados = funis.map((funil) => ({
+    ...funil,
+    colunas: funil.colunas.map((coluna) => ({
+      ...coluna,
+      cards: coluna.cards.map((card) =>
+        card.id === cardId
+          ? {
+              ...card,
+              statusFechamento,
+              motivoPerda: statusFechamento === 'perdido' ? (motivoPerda ?? null) : null,
+              dataFechamento: statusFechamento ? hoje : null,
+            }
+          : card,
+      ),
+    })),
+  }));
+
+  return chamar<unknown>('/api/funis', { metodo: 'PUT', corpo: atualizados });
+}
 
 /** Marca a tarefa como concluída ou reabre. */
 export function concluirTarefa(tarefaId: string, concluida: boolean) {
