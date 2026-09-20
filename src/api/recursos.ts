@@ -317,3 +317,72 @@ export function convidarMembro(entrada: { nome: string; email: string; funcao: (
     },
   });
 }
+
+/* -------------------------------------------------------------------------- */
+/* Funil: novo negócio e nova etapa                                           */
+/* -------------------------------------------------------------------------- */
+
+/** As mesmas origens que o funil da web oferece. */
+export const ORIGENS_DE_NEGOCIO = ['Instagram', 'TikTok', 'Meta Ads', 'Google Ads', 'Indicação'] as const;
+
+/**
+ * Cria um negócio na primeira etapa do funil.
+ *
+ * Igual ao web: o card entra na lista e o funil inteiro é gravado (`PUT /api/funis`). Não existe
+ * rota de criar card sozinho.
+ */
+export function criarNegocio(
+  funis: Funil[],
+  funilId: string,
+  entrada: { nome: string; valor?: string; origem: string },
+) {
+  const hoje = new Date().toISOString().slice(0, 10);
+  const novo = {
+    id: `negocio-${Date.now()}`,
+    nome: entrada.nome,
+    valor: entrada.valor?.trim() || '—',
+    origem: entrada.origem,
+    dias: 'Hoje',
+    data: hoje,
+  } as Funil['colunas'][number]['cards'][number];
+
+  const atualizados = funis.map((funil) => {
+    if (funil.id !== funilId) return funil;
+    return {
+      ...funil,
+      colunas: funil.colunas.map((coluna, i) =>
+        i === 0 ? { ...coluna, cards: [...coluna.cards, novo], total: coluna.cards.length + 1 } : coluna,
+      ),
+    };
+  });
+
+  return chamar<unknown>('/api/funis', { metodo: 'PUT', corpo: atualizados });
+}
+
+/** Cria uma etapa no fim do funil. Essa tem rota própria, que grava na hora. */
+export function criarEtapa(funilId: string, nome: string) {
+  const id = `etapa-${Date.now()}`;
+  return chamar<unknown>('/api/funis/estrutura', {
+    metodo: 'POST',
+    corpo: { tipo: 'etapa', id, nome, funilId },
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Perfil e senha                                                             */
+/* -------------------------------------------------------------------------- */
+
+/** Grava os dados do próprio perfil (nome, telefone, foto). */
+export function salvarMeuPerfil(membroId: string, dados: { nome?: string; telefone?: string; foto?: string }) {
+  return chamar<unknown>(`/api/equipe/${membroId}`, { metodo: 'PATCH', corpo: dados });
+}
+
+/**
+ * Pede o link de trocar senha por e-mail.
+ *
+ * Trocar senha dentro do app exigiria a senha atual em tela, e o CRM não tem rota para isso: ele
+ * troca por link com validade de uma hora. O app usa o mesmo caminho.
+ */
+export function pedirLinkDeNovaSenha(email: string) {
+  return chamar<{ mensagem?: string }>('/api/auth/esqueci-senha', { metodo: 'POST', corpo: { email } });
+}

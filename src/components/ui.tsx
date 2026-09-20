@@ -774,3 +774,35 @@ export function LinhaMenu({
     </Pressable>
   );
 }
+
+/** Recado curto depois de uma ação: confirmação ou erro. Sem ícone piscando, sem toast que foge. */
+export function Aviso({
+  texto,
+  tom = 'info',
+}: {
+  texto: string;
+  tom?: 'sucesso' | 'erro' | 'info';
+}) {
+  const c = useCores();
+  const cor = tom === 'sucesso' ? c.success : tom === 'erro' ? c.danger : c.blue;
+  const fundo = tom === 'sucesso' ? c.successSoft : tom === 'erro' ? c.dangerSoft : c.blueSoft;
+  const icone: IconeNome =
+    tom === 'sucesso' ? 'checkmark-circle-outline' : tom === 'erro' ? 'alert-circle-outline' : 'information-circle-outline';
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: space[2],
+        backgroundColor: fundo,
+        borderRadius: radius.md,
+        paddingHorizontal: space[3],
+        paddingVertical: space[3],
+      }}
+    >
+      <Ionicons name={icone} size={15} color={cor} style={{ marginTop: 1 }} />
+      <Text style={{ flex: 1, color: cor, fontSize: fontSize.sm, lineHeight: 19 }}>{texto}</Text>
+    </View>
+  );
+}

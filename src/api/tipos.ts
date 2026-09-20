@@ -8,6 +8,8 @@ export type Origem = string;
 export type Canal = 'WhatsApp' | 'Instagram' | 'TikTok' | 'E-mail' | string;
 
 export type SessaoDoUsuario = {
+  /** Id do Membro — usado para gravar o próprio perfil em `PATCH /api/equipe/[id]`. */
+  id?: string;
   name?: string;
   email?: string;
   initials?: string;
