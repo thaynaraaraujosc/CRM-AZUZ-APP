@@ -1,4 +1,6 @@
 import type {
+  ColunaTarefas,
+  Compromisso as CompromissoApi,
   Contato as ContatoApi,
   Conversa as ConversaApi,
   Funil,
@@ -8,7 +10,7 @@ import type {
   RespostaDeSessao,
 } from '@/api/tipos';
 
-import { contatos, conversas, equipe, etapasFunil, funis, mensagens, usuario } from './dados';
+import { colunasTarefas, compromissosHoje, contatos, conversas, equipe, etapasFunil, funis, mensagens, usuario } from './dados';
 
 /**
  * Respostas de mentira no formato exato da API, para o modo demonstração.
@@ -115,6 +117,40 @@ export const equipeDemo: MembroDaEquipe[] = equipe.map((m) => ({
   ativo: true,
 }));
 
+export const tarefasDemo: ColunaTarefas[] = colunasTarefas.map((col) => ({
+  id: col.id,
+  titulo: col.titulo,
+  cards: col.tarefas.map((t) => ({
+    id: t.id,
+    titulo: t.titulo,
+    contato: t.contato,
+    data: t.prazo,
+    atrasada: t.atrasada,
+    responsavel: { nome: t.responsavel, initials: t.iniciaisResponsavel },
+    concluida: col.id === 't-concluido',
+    urgencia: t.prioridade,
+    descricao: '',
+    anexo: null,
+  })),
+}));
+
+const hojeIso = new Date().toISOString().slice(0, 10);
+
+export const agendaDemo: CompromissoApi[] = compromissosHoje.map((cp) => ({
+  id: cp.id,
+  contato: cp.com,
+  responsavel: usuario.nome,
+  dataIso: hojeIso,
+  hora: cp.hora,
+  horaFim: null,
+  tipo: cp.titulo,
+  categoria: null,
+  descricao: null,
+  local: cp.local,
+  status: cp.status,
+  origem: 'Manual',
+}));
+
 /** Resposta do modo demonstração para um caminho da API, ou `undefined` se a rota não tem demo. */
 export function respostaDemo(caminho: string): unknown | undefined {
   if (caminho.startsWith('/api/auth/session')) return sessaoDemo;
@@ -127,5 +163,7 @@ export function respostaDemo(caminho: string): unknown | undefined {
   if (caminho.startsWith('/api/funis')) return funisDemo;
   if (caminho.startsWith('/api/contatos')) return contatosDemo;
   if (caminho.startsWith('/api/equipe')) return equipeDemo;
+  if (caminho.startsWith('/api/tarefas')) return tarefasDemo;
+  if (caminho.startsWith('/api/agenda')) return agendaDemo;
   return undefined;
 }

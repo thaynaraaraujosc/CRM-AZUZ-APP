@@ -118,3 +118,45 @@ export type MembroDaEquipe = {
   role?: string | null;
   ativo?: boolean;
 };
+
+/* -------------------------------------------------------------------------- */
+/* Tarefas e agenda                                                           */
+/* -------------------------------------------------------------------------- */
+
+export type TarefaCard = {
+  id: string;
+  titulo: string;
+  contato: string;
+  contatoId?: string;
+  /** Prazo já formatado pelo servidor, como "Hoje, 11:00". */
+  data: string;
+  atrasada?: boolean;
+  responsavel: { nome: string; initials: string };
+  concluida?: boolean;
+  urgencia: string;
+  descricao: string;
+  anexo: { arquivo: string; detalhe: string } | null;
+  modelo?: string;
+};
+
+export type ColunaTarefas = {
+  id?: string;
+  titulo: string;
+  cards: TarefaCard[];
+};
+
+export type Compromisso = {
+  id: string;
+  contato: string;
+  responsavel: string;
+  /** Data no formato aaaa-mm-dd. */
+  dataIso: string;
+  hora: string;
+  horaFim?: string | null;
+  tipo: string;
+  categoria?: string | null;
+  descricao?: string | null;
+  local?: string | null;
+  status: string;
+  origem: string;
+};

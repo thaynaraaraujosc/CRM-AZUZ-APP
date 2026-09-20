@@ -1,141 +1,213 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CartaoCompromisso } from '@/components/cards';
-import { BotaoIcone, Cabecalho, Cartao, Chip, Corpo, ListaVazia, Secundario, TituloSecao } from '@/components/ui';
-import { compromissosHoje, diasDaSemana } from '@/mock/dados';
+import { useAgenda } from '@/api/recursos';
+import { useAoPerderSessao } from '@/api/sessao';
+import type { Compromisso } from '@/api/tipos';
+import { Carregando, FalhaAoCarregar } from '@/components/estados';
+import { BotaoIcone, Cabecalho, Cartao, ListaVazia, Secundario, TituloSecao } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
-const VISOES = ['Dia', 'Semana', 'Mês'];
+const DIAS_DA_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const MESES = [
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
+];
 
-/** Agenda da semana com o dia selecionado aberto abaixo. */
+/** Data de hoje no mesmo formato que o servidor usa (aaaa-mm-dd), no fuso do aparelho. */
+function isoDoDia(data: Date): string {
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const dia = String(data.getDate()).padStart(2, '0');
+  return `${data.getFullYear()}-${mes}-${dia}`;
+}
+
+function rotuloLongo(iso: string): string {
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  const data = new Date(ano, mes - 1, dia);
+  return `${DIAS_DA_SEMANA[data.getDay()]}, ${dia} de ${MESES[mes - 1]}`;
+}
+
+/** Agenda real do CRM: a semana em cima, o dia escolhido embaixo. */
 export default function AgendaScreen() {
   const c = useCores();
+  const aoPerderSessao = useAoPerderSessao();
+  const { dados, carregando, erro, recarregar } = useAgenda(aoPerderSessao);
+
+  const hoje = new Date();
+  const [diaEscolhido, setDiaEscolhido] = useState(isoDoDia(hoje));
+
+  const compromissos = dados ?? [];
+
+  // Semana começando no domingo da semana atual.
+  const domingo = new Date(hoje);
+  domingo.setDate(hoje.getDate() - hoje.getDay());
+  const semana = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(domingo);
+    d.setDate(domingo.getDate() + i);
+    return d;
+  });
+
+  const doDia = compromissos
+    .filter((cp) => cp.dataIso === diaEscolhido)
+    .sort((a, b) => a.hora.localeCompare(b.hora));
+
+  const proximos = compromissos
+    .filter((cp) => cp.dataIso > diaEscolhido)
+    .sort((a, b) => `${a.dataIso}${a.hora}`.localeCompare(`${b.dataIso}${b.hora}`))
+    .slice(0, 5);
+
+  function corDoStatus(status: string) {
+    const s = status.toLowerCase();
+    if (s.includes('cancel')) return c.danger;
+    if (s.includes('confirm')) return c.success;
+    if (s.includes('atras')) return c.warning;
+    return c.textMuted;
+  }
+
+  function Linha({ cp }: { cp: Compromisso }) {
+    return (
+      <Cartao padding={space[3]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+          <View
+            style={{
+              width: 56,
+              paddingVertical: space[2],
+              borderRadius: radius.md,
+              backgroundColor: c.gray100,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: c.ink, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>{cp.hora}</Text>
+            {cp.horaFim ? (
+              <Text style={{ color: c.textFaint, fontSize: 10 }}>até {cp.horaFim}</Text>
+            ) : null}
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={1} style={{ color: c.ink, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>
+              {cp.tipo || 'Compromisso'}
+            </Text>
+            <Text numberOfLines={1} style={{ color: c.textMuted, fontSize: fontSize.sm, marginTop: 2 }}>
+              {[cp.contato, cp.local, cp.responsavel].filter(Boolean).join(' · ')}
+            </Text>
+          </View>
+
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: corDoStatus(cp.status) }} />
+        </View>
+      </Cartao>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
       <Cabecalho
         titulo="Agenda"
-        sub="Setembro de 2025 · 8 compromissos na semana"
+        sub={
+          carregando
+            ? 'Carregando…'
+            : `${MESES[hoje.getMonth()]} · ${compromissos.length} compromissos`
+        }
         voltar
         acao={<BotaoIcone icone="add" cor={c.acaoTexto} fundo={c.acao} />}
       />
 
-      <View style={{ backgroundColor: c.surface, paddingVertical: space[3], gap: space[3] }}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: space[2], paddingHorizontal: space[4] }}
-        >
-          {VISOES.map((v, i) => (
-            <Chip key={v} texto={v} ativo={i === 0} />
-          ))}
-        </ScrollView>
-
-        {/* Faixa da semana */}
+      <View style={{ backgroundColor: c.surface, paddingVertical: space[3] }}>
         <View style={{ flexDirection: 'row', paddingHorizontal: space[3], gap: space[1] }}>
-          {diasDaSemana.map((d) => {
-            const hoje = 'hoje' in d && d.hoje;
+          {semana.map((d) => {
+            const iso = isoDoDia(d);
+            const escolhido = iso === diaEscolhido;
+            const quantos = compromissos.filter((cp) => cp.dataIso === iso).length;
+
             return (
-              <View
-                key={d.dia}
+              <Pressable
+                key={iso}
+                onPress={() => setDiaEscolhido(iso)}
                 style={{
                   flex: 1,
                   alignItems: 'center',
                   gap: 4,
                   paddingVertical: space[2],
                   borderRadius: radius.md,
-                  backgroundColor: hoje ? c.acao : 'transparent',
-                  borderWidth: hoje ? StyleSheet.hairlineWidth : 0,
-                  borderColor: c.acaoBorda,
+                  backgroundColor: escolhido ? c.acao : 'transparent',
                 }}
               >
-                <Text style={{ color: hoje ? 'rgba(255,255,255,0.7)' : c.textFaint, fontSize: fontSize.xs }}>
-                  {d.dia}
+                <Text style={{ color: escolhido ? 'rgba(255,255,255,0.7)' : c.textFaint, fontSize: fontSize.xs }}>
+                  {DIAS_DA_SEMANA[d.getDay()]}
                 </Text>
                 <Text
                   style={{
-                    color: hoje ? c.acaoTexto : c.ink,
+                    color: escolhido ? c.acaoTexto : c.ink,
                     fontSize: fontSize.md,
                     fontWeight: fontWeight.bold,
                   }}
                 >
-                  {d.numero}
+                  {d.getDate()}
                 </Text>
                 <View
                   style={{
                     width: 5,
                     height: 5,
                     borderRadius: 3,
-                    backgroundColor: d.eventos > 0 ? (hoje ? c.acaoTexto : c.blue) : 'transparent',
+                    backgroundColor: quantos > 0 ? (escolhido ? c.acaoTexto : c.blue) : 'transparent',
                   }}
                 />
-              </View>
+              </Pressable>
             );
           })}
         </View>
       </View>
 
-      <ScrollView
-        contentContainerStyle={{ padding: space[4], paddingBottom: space[7], gap: space[5] }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ gap: space[3] }}>
-          <TituloSecao titulo="Quarta, 10 de setembro" contagem={compromissosHoje.length} />
-          <View style={{ gap: space[2] }}>
-            {compromissosHoje.map((cp) => (
-              <CartaoCompromisso key={cp.id} compromisso={cp} />
-            ))}
+      {erro ? (
+        <FalhaAoCarregar mensagem={erro} aoTentar={recarregar} />
+      ) : carregando && compromissos.length === 0 ? (
+        <Carregando texto="Buscando sua agenda" />
+      ) : (
+        <ScrollView
+          contentContainerStyle={{ padding: space[4], paddingBottom: space[7], gap: space[5] }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={carregando} onRefresh={recarregar} tintColor={c.blue} />}
+        >
+          <View style={{ gap: space[3] }}>
+            <TituloSecao titulo={rotuloLongo(diaEscolhido)} contagem={doDia.length} />
+            {doDia.length === 0 ? (
+              <Cartao>
+                <ListaVazia
+                  icone="calendar-outline"
+                  titulo="Dia livre"
+                  descricao="Nenhum compromisso marcado para este dia."
+                />
+              </Cartao>
+            ) : (
+              doDia.map((cp) => <Linha key={cp.id} cp={cp} />)
+            )}
           </View>
-        </View>
 
-        <View style={{ gap: space[3] }}>
-          <TituloSecao titulo="Quinta, 11 de setembro" contagem={0} />
-          <Cartao>
-            <ListaVazia
-              icone="calendar-outline"
-              titulo="Dia livre"
-              descricao="Nenhum compromisso marcado. Bom momento para o follow-up dos negócios parados."
-            />
-          </Cartao>
-        </View>
-
-        <View style={{ gap: space[3] }}>
-          <TituloSecao titulo="Integrações" />
-          <Cartao style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
-            <View
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: radius.md,
-                backgroundColor: c.gray100,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="logo-google" size={16} color={c.ink} />
+          {proximos.length > 0 ? (
+            <View style={{ gap: space[3] }}>
+              <TituloSecao titulo="Próximos" contagem={proximos.length} />
+              {proximos.map((cp) => (
+                <View key={cp.id} style={{ gap: space[1] }}>
+                  <Secundario>{rotuloLongo(cp.dataIso)}</Secundario>
+                  <Linha cp={cp} />
+                </View>
+              ))}
             </View>
-            <View style={{ flex: 1 }}>
-              <Corpo style={{ fontWeight: fontWeight.bold }}>Google Agenda</Corpo>
-              <Secundario>Sincroniza compromissos nos dois sentidos</Secundario>
-            </View>
-            <View
-              style={{
-                paddingHorizontal: space[2],
-                paddingVertical: 4,
-                borderRadius: radius.sm,
-                backgroundColor: c.successSoft,
-                borderWidth: StyleSheet.hairlineWidth,
-                borderColor: c.line,
-              }}
-            >
-              <Text style={{ color: c.success, fontSize: fontSize.xs, fontWeight: fontWeight.bold }}>Conectado</Text>
-            </View>
-          </Cartao>
-        </View>
-      </ScrollView>
+          ) : null}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

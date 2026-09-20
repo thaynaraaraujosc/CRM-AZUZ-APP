@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { chamar, ErroDeSessao } from './cliente';
-import type { Contato, Conversa, Funil, HistoricoDeMensagens, MembroDaEquipe } from './tipos';
+import type {
+  ColunaTarefas,
+  Compromisso,
+  Contato,
+  Conversa,
+  Funil,
+  HistoricoDeMensagens,
+  MembroDaEquipe,
+} from './tipos';
 
 /** Estado de uma busca: o suficiente para a tela mostrar carregando, erro ou dado. */
 export type Busca<T> = {
@@ -75,6 +83,22 @@ export const useContatos = (aoPerderSessao?: () => void) =>
 
 export const useEquipe = (aoPerderSessao?: () => void) =>
   useRecurso<MembroDaEquipe[]>('/api/equipe', aoPerderSessao);
+
+export const useTarefas = (aoPerderSessao?: () => void) =>
+  useRecurso<ColunaTarefas[]>('/api/tarefas', aoPerderSessao);
+
+export const useAgenda = (aoPerderSessao?: () => void) =>
+  useRecurso<Compromisso[]>('/api/agenda', aoPerderSessao);
+
+/** Marca a tarefa como concluída ou reabre. */
+export function concluirTarefa(tarefaId: string, concluida: boolean) {
+  return chamar<unknown>(`/api/tarefas/${tarefaId}`, { metodo: 'PATCH', corpo: { concluida } });
+}
+
+/** Muda o status de um compromisso ("Confirmado", "Cancelado"…). */
+export function mudarStatusDoCompromisso(compromissoId: string, status: string) {
+  return chamar<unknown>(`/api/agenda/${compromissoId}`, { metodo: 'PATCH', corpo: { status } });
+}
 
 /**
  * Manda um texto numa conversa. O canal é escolhido pelo servidor, a partir da própria conversa.
