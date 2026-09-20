@@ -128,7 +128,7 @@ function Conversas() {
   }
 
   const visiveis = todas.filter((cv) => combina(cv, situacao, canal) && combinaComABusca(cv)).map(conversaNaTela);
-  const naoLidas = todas.filter((cv) => combina(cv, 'nao-lidas', canal)).length;
+  const naoLidas = todas.filter((cv) => combina(cv, 'nao-lidas', canal) && combinaComABusca(cv)).length;
 
   /** Contagem de cada chip, respeitando o outro filtro que já está ligado. */
   const quantosNaSituacao = (valor: Situacao) => todas.filter((cv) => combina(cv, valor, canal)).length;
@@ -138,7 +138,11 @@ function Conversas() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
       <Cabecalho
         titulo="Conversas"
-        sub={carregando ? 'Carregando…' : `${visiveis.length} conversas · ${naoLidas} não lidas`}
+        sub={
+          carregando
+            ? 'Carregando…'
+            : `${visiveis.length === 1 ? '1 conversa' : `${visiveis.length} conversas`} · ${naoLidas} não lidas`
+        }
         acao={
           <BotaoIcone
             icone="add"

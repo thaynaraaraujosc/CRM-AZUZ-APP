@@ -1,13 +1,20 @@
+import type { Campanha } from '@/api/metricas';
 import type {
+  CanalDisponivel,
   ColunaTarefas,
   Compromisso as CompromissoApi,
   Contato as ContatoApi,
   Conversa as ConversaApi,
+  DocumentoApi,
+  FluxoAutomacao,
+  FormularioApi,
   Funil,
   HistoricoDeMensagens,
   MembroDaEquipe,
+  RelatorioGerado,
   RespostaDeAssinatura,
   RespostaDeSessao,
+  SessaoAtiva,
 } from '@/api/tipos';
 
 import { colunasTarefas, compromissosHoje, contatos, conversas, equipe, etapasFunil, funis, mensagens, usuario } from './dados';
@@ -151,6 +158,113 @@ export const agendaDemo: CompromissoApi[] = compromissosHoje.map((cp) => ({
   origem: 'Manual',
 }));
 
+
+/* -------------------------------------------------------------------------- */
+/* Operação, configurações e análise                                          */
+/* -------------------------------------------------------------------------- */
+
+export const automacoesDemo: FluxoAutomacao[] = [
+  {
+    id: 'fluxo-boas-vindas',
+    nome: 'Boas-vindas ao lead novo',
+    descricao: 'Manda a primeira mensagem assim que o lead chega pelo anúncio.',
+    categoria: 'Atendimento',
+    status: 'publicado',
+    ativa: true,
+    execucoes: 412,
+    atualizadoEm: minutosAtras(180),
+  },
+  {
+    id: 'fluxo-retomada',
+    nome: 'Retomar quem parou de responder',
+    descricao: 'Depois de 2 dias sem resposta, tenta de novo.',
+    categoria: 'Follow-up',
+    status: 'publicado',
+    ativa: false,
+    execucoes: 96,
+    atualizadoEm: minutosAtras(1440),
+  },
+  {
+    id: 'fluxo-pos-venda',
+    nome: 'Pós-venda',
+    status: 'rascunho',
+    ativa: false,
+    execucoes: 0,
+    atualizadoEm: minutosAtras(60),
+  },
+];
+
+export const formulariosDemo: FormularioApi[] = [
+  {
+    id: 'form-avaliacao',
+    nome: 'Agendar avaliação',
+    descricao: 'Formulário do anúncio de Instagram',
+    status: 'publicado',
+    criadoEm: minutosAtras(20000),
+    atualizadoEm: minutosAtras(500),
+  },
+  {
+    id: 'form-orcamento',
+    nome: 'Pedir orçamento',
+    status: 'rascunho',
+    criadoEm: minutosAtras(9000),
+    atualizadoEm: minutosAtras(200),
+  },
+];
+
+export const documentosDemo: DocumentoApi[] = [
+  {
+    id: 'doc-contrato',
+    titulo: 'Contrato padrão 2026',
+    autor: usuario.nome,
+    criadoEm: minutosAtras(20000),
+    atualizadoEm: minutosAtras(800),
+    favorito: true,
+  },
+  {
+    id: 'doc-proposta',
+    titulo: 'Modelo de proposta',
+    autor: usuario.nome,
+    criadoEm: minutosAtras(9000),
+    atualizadoEm: minutosAtras(3000),
+  },
+];
+
+export const canaisDemo: CanalDisponivel[] = [
+  { canal: 'whatsapp_oficial', label: 'WhatsApp API Oficial', conectado: true, detalhe: '+55 62 99999-0000' },
+  {
+    canal: 'whatsapp_nao_oficial',
+    label: 'WhatsApp (QR Code)',
+    conectado: false,
+    motivo: 'Escaneie o QR Code em Configurações → Outras integrações.',
+  },
+  { canal: 'email', label: 'E-mail', conectado: false, motivo: 'O envio de e-mail não está configurado no servidor.' },
+];
+
+export const sessoesDemo: SessaoAtiva[] = [
+  { id: 'sessao-atual', dispositivo: 'iPhone', ip: '179.XXX.XXX.10', criadoEm: minutosAtras(15), atual: true },
+  { id: 'sessao-mac', dispositivo: 'Chrome no macOS', ip: '179.XXX.XXX.10', criadoEm: minutosAtras(600), atual: false },
+];
+
+export const relatoriosDemo: RelatorioGerado[] = [
+  {
+    id: 'rel-setembro',
+    nome: 'Resumo comercial · setembro',
+    tipo: 'resumo',
+    periodo: 'Setembro de 2026',
+    autor: usuario.nome,
+    data: '15/09/2026',
+    formato: 'pdf',
+  },
+];
+
+export const campanhasDemo: Campanha[] = [
+  { plataforma: 'M', nome: 'Avaliação · Goiânia', sub: '86 leads · R$ 2.400 investidos', roas: '3,2x', barra: 100, vendas: 12 },
+  { plataforma: 'M', nome: 'Remarketing · setembro', sub: '31 leads · R$ 900 investidos', roas: '2,1x', barra: 38, vendas: 4, pausada: true },
+];
+
+export const motivosDePerdaDemo = ['Achou caro', 'Sem retorno', 'Fechou com concorrente', 'Não era o momento', 'Outro'];
+
 /** Resposta do modo demonstração para um caminho da API, ou `undefined` se a rota não tem demo. */
 export function respostaDemo(caminho: string): unknown | undefined {
   if (caminho.startsWith('/api/auth/session')) return sessaoDemo;
@@ -166,5 +280,21 @@ export function respostaDemo(caminho: string): unknown | undefined {
   if (caminho.startsWith('/api/tarefas')) return tarefasDemo;
   if (caminho.startsWith('/api/agenda')) return agendaDemo;
   if (caminho.startsWith('/api/contatos/linha-do-tempo')) return { eventos: [] };
+  if (caminho.startsWith('/api/automacoes-fluxos')) return automacoesDemo;
+  if (caminho.startsWith('/api/formularios')) return formulariosDemo;
+  if (caminho.startsWith('/api/documentos')) return documentosDemo;
+  if (caminho.startsWith('/api/canais')) return canaisDemo;
+  if (caminho.startsWith('/api/seguranca/sessoes')) return sessoesDemo;
+  if (caminho.startsWith('/api/relatorios')) return relatoriosDemo;
+  if (caminho.startsWith('/api/motivos-perda')) return motivosDePerdaDemo;
+  if (caminho.startsWith('/api/integracoes/meta/ads/campanhas')) return campanhasDemo;
+  if (caminho.startsWith('/api/integracoes/meta')) return { status: 'conectado', metadados: { username: 'empresademo' } };
+  if (caminho.startsWith('/api/preferencias')) return { notificacoesAtivas: true, notificarNovaTarefa: false };
+  if (caminho.startsWith('/api/azuz-ia/perguntar')) {
+    return {
+      resposta:
+        'No modo demonstração eu não chamo o servidor de verdade. No seu celular, com a sua conta, aqui vem a resposta lendo os dados do seu workspace.',
+    };
+  }
   return undefined;
 }
