@@ -3,14 +3,16 @@ import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { concluirTarefa, useTarefas } from '@/api/recursos';
-import { useAoPerderSessao } from '@/api/sessao';
+import { concluirTarefa, criarTarefa, useTarefas } from '@/api/recursos';
+import { useAoPerderSessao, useSessao } from '@/api/sessao';
 import type { TarefaCard } from '@/api/tipos';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
+import { FolhaDeCriacao } from '@/components/FolhaDeCriacao';
 import {
   Avatar,
   BotaoIcone,
   Cabecalho,
+  Campo,
   Cartao,
   Chip,
   Indicador,
@@ -40,6 +42,46 @@ export default function TarefasScreen() {
   const c = useCores();
   const aoPerderSessao = useAoPerderSessao();
   const { dados, carregando, erro, recarregar } = useTarefas(aoPerderSessao);
+  const { usuario } = useSessao();
+
+  const [criando, setCriando] = useState(false);
+  const [titulo, setTitulo] = useState('');
+  const [contato, setContato] = useState('');
+  const [prazo, setPrazo] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const [falhaAoCriar, setFalhaAoCriar] = useState<string | null>(null);
+
+  async function salvarTarefa() {
+    if (!titulo.trim()) {
+      setFalhaAoCriar('O que precisa ser feito é obrigatório.');
+      return;
+    }
+    setSalvando(true);
+    setFalhaAoCriar(null);
+    try {
+      await criarTarefa({
+        titulo: titulo.trim(),
+        contato: contato.trim(),
+        data: prazo.trim(),
+        descricao: descricao.trim(),
+        responsavel: {
+          nome: usuario?.name ?? '',
+          initials: usuario?.initials ?? (usuario?.name ?? '?').slice(0, 2).toUpperCase(),
+        },
+      });
+      setCriando(false);
+      setTitulo('');
+      setContato('');
+      setPrazo('');
+      setDescricao('');
+      recarregar();
+    } catch (e) {
+      setFalhaAoCriar(e instanceof Error ? e.message : 'Não foi possível criar a tarefa.');
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   const [filtro, setFiltro] = useState<Filtro>('todas');
   /** Tarefas que acabaram de ser marcadas, para o toque responder antes da resposta do servidor. */
@@ -87,7 +129,7 @@ export default function TarefasScreen() {
       <Cabecalho
         titulo="Tarefas"
         sub={carregando ? 'Carregando…' : `${abertas} abertas · ${atrasadas} atrasadas`}
-        acao={<BotaoIcone icone="add" cor={c.acaoTexto} fundo={c.acao} />}
+        acao={<BotaoIcone icone="add" cor={c.acaoTexto} fundo={c.acao} onPress={() => setCriando(true)} />}
       />
 
       <View style={{ backgroundColor: c.surface, paddingVertical: space[3] }}>
@@ -217,6 +259,22 @@ export default function TarefasScreen() {
           <View style={{ height: StyleSheet.hairlineWidth }} />
         </ScrollView>
       )}
+
+      <FolhaDeCriacao
+        aberta={criando}
+        titulo="Nova tarefa"
+        descricao="Ela entra na primeira etapa do seu quadro."
+        salvando={salvando}
+        erro={falhaAoCriar}
+        aoFechar={() => setCriando(false)}
+        aoSalvar={salvarTarefa}
+        rotuloSalvar="Criar tarefa"
+      >
+        <Campo rotulo="O que precisa ser feito" placeholder="Ex.: ligar para confirmar" valor={titulo} aoMudar={setTitulo} />
+        <Campo rotulo="Contato" placeholder="opcional" valor={contato} aoMudar={setContato} />
+        <Campo rotulo="Prazo" placeholder="Ex.: Hoje, 17:00" valor={prazo} aoMudar={setPrazo} />
+        <Campo rotulo="Detalhes" placeholder="opcional" valor={descricao} aoMudar={setDescricao} multilinha />
+      </FolhaDeCriacao>
     </SafeAreaView>
   );
 }

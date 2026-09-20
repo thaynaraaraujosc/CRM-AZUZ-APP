@@ -3,11 +3,12 @@ import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAgenda } from '@/api/recursos';
-import { useAoPerderSessao } from '@/api/sessao';
+import { criarCompromisso, useAgenda } from '@/api/recursos';
+import { useAoPerderSessao, useSessao } from '@/api/sessao';
 import type { Compromisso } from '@/api/tipos';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
-import { BotaoIcone, Cabecalho, Cartao, ListaVazia, Secundario, TituloSecao } from '@/components/ui';
+import { FolhaDeCriacao } from '@/components/FolhaDeCriacao';
+import { BotaoIcone, Cabecalho, Campo, Cartao, ListaVazia, Secundario, TituloSecao } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -45,6 +46,44 @@ export default function AgendaScreen() {
   const c = useCores();
   const aoPerderSessao = useAoPerderSessao();
   const { dados, carregando, erro, recarregar } = useAgenda(aoPerderSessao);
+  const { usuario } = useSessao();
+
+  const [criando, setCriando] = useState(false);
+  const [comQuem, setComQuem] = useState('');
+  const [tipo, setTipo] = useState('');
+  const [hora, setHora] = useState('');
+  const [local, setLocal] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const [falha, setFalha] = useState<string | null>(null);
+
+  async function salvar() {
+    if (!comQuem.trim()) {
+      setFalha('Diga com quem é o compromisso.');
+      return;
+    }
+    setSalvando(true);
+    setFalha(null);
+    try {
+      await criarCompromisso({
+        contato: comQuem.trim(),
+        dataIso: diaEscolhido,
+        hora: hora.trim() || '09:00',
+        tipo: tipo.trim() || 'Compromisso',
+        local: local.trim(),
+        responsavel: usuario?.name ?? '',
+      });
+      setCriando(false);
+      setComQuem('');
+      setTipo('');
+      setHora('');
+      setLocal('');
+      recarregar();
+    } catch (e) {
+      setFalha(e instanceof Error ? e.message : 'Não foi possível criar o compromisso.');
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   const hoje = new Date();
   const [diaEscolhido, setDiaEscolhido] = useState(isoDoDia(hoje));
@@ -121,7 +160,7 @@ export default function AgendaScreen() {
             : `${MESES[hoje.getMonth()]} · ${compromissos.length} compromissos`
         }
         voltar
-        acao={<BotaoIcone icone="add" cor={c.acaoTexto} fundo={c.acao} />}
+        acao={<BotaoIcone icone="add" cor={c.acaoTexto} fundo={c.acao} onPress={() => setCriando(true)} />}
       />
 
       <View style={{ backgroundColor: c.surface, paddingVertical: space[3] }}>
@@ -208,6 +247,22 @@ export default function AgendaScreen() {
           ) : null}
         </ScrollView>
       )}
+
+      <FolhaDeCriacao
+        aberta={criando}
+        titulo="Novo compromisso"
+        descricao={`Será marcado para ${rotuloLongo(diaEscolhido)}.`}
+        salvando={salvando}
+        erro={falha}
+        aoFechar={() => setCriando(false)}
+        aoSalvar={salvar}
+        rotuloSalvar="Marcar"
+      >
+        <Campo rotulo="Com quem" placeholder="Nome do contato" valor={comQuem} aoMudar={setComQuem} />
+        <Campo rotulo="O que é" placeholder="Ex.: Call de apresentação" valor={tipo} aoMudar={setTipo} />
+        <Campo rotulo="Hora" placeholder="Ex.: 09:30" valor={hora} aoMudar={setHora} />
+        <Campo rotulo="Onde" placeholder="opcional" valor={local} aoMudar={setLocal} />
+      </FolhaDeCriacao>
     </SafeAreaView>
   );
 }

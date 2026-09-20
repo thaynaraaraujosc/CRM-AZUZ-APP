@@ -169,3 +169,99 @@ export function moverNegocio(cardId: string, etapaId: string) {
     corpo: { cardId, etapaId },
   });
 }
+
+/* -------------------------------------------------------------------------- */
+/* Criação                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** Cria (ou completa) um contato. O servidor casa pelo nome dentro do workspace. */
+export function criarContato(nome: string, dados: { whatsapp?: string; email?: string }) {
+  return chamar<Contato>('/api/contatos', { metodo: 'POST', corpo: { nome, dados } });
+}
+
+/**
+ * Cria uma tarefa. `data` é texto livre porque é assim que o CRM guarda o prazo: o quadro mostra
+ * o que foi escrito, como "Hoje, 17:00".
+ */
+export function criarTarefa(entrada: {
+  titulo: string;
+  contato?: string;
+  data: string;
+  descricao?: string;
+  responsavel: { nome: string; initials: string };
+  urgencia?: string;
+}) {
+  return chamar<unknown>('/api/tarefas', {
+    metodo: 'POST',
+    corpo: {
+      titulo: entrada.titulo,
+      contato: entrada.contato ?? '',
+      data: entrada.data,
+      descricao: entrada.descricao ?? '',
+      responsavel: entrada.responsavel,
+      urgencia: entrada.urgencia ?? 'media',
+    },
+  });
+}
+
+/** Cria um compromisso na agenda. `dataIso` é aaaa-mm-dd. */
+export function criarCompromisso(entrada: {
+  contato: string;
+  dataIso: string;
+  hora: string;
+  tipo: string;
+  local?: string;
+  responsavel: string;
+  descricao?: string;
+}) {
+  return chamar<Compromisso>('/api/agenda', { metodo: 'POST', corpo: entrada });
+}
+
+/** Permissões que cada função ganha ao ser convidada — as mesmas do CRM web. */
+export const FUNCOES_DE_EQUIPE = [
+  {
+    id: 'vendedor',
+    nome: 'Vendedor',
+    permissoes: [
+      'contatos_visualizar',
+      'contatos_criar',
+      'contatos_editar',
+      'wa_visualizar',
+      'wa_responder',
+      'wa_so_proprias',
+      'funil_visualizar',
+      'funil_criar_negocios',
+      'funil_mover_negocios',
+    ],
+  },
+  {
+    id: 'atendente',
+    nome: 'Atendente',
+    permissoes: ['contatos_visualizar', 'wa_visualizar', 'wa_responder', 'wa_so_proprias', 'funil_visualizar'],
+  },
+  {
+    id: 'gestor_trafego',
+    nome: 'Gestor de tráfego',
+    permissoes: ['contatos_visualizar', 'rel_visualizar', 'rel_exportar', 'funil_visualizar'],
+  },
+  {
+    id: 'visualizador',
+    nome: 'Visualizador',
+    permissoes: ['contatos_visualizar', 'funil_visualizar', 'rel_visualizar'],
+  },
+] as const;
+
+/** Convida alguém para a equipe. Entra inativo, com convite pendente, como no web. */
+export function convidarMembro(entrada: { nome: string; email: string; funcao: (typeof FUNCOES_DE_EQUIPE)[number] }) {
+  return chamar<MembroDaEquipe>('/api/equipe', {
+    metodo: 'POST',
+    corpo: {
+      nome: entrada.nome,
+      email: entrada.email,
+      papel: entrada.funcao.nome,
+      papelTipo: entrada.funcao.id,
+      enxerga: 'Somente os próprios',
+      permissoes: entrada.funcao.permissoes,
+    },
+  });
+}

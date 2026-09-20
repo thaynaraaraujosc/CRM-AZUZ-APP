@@ -165,5 +165,6 @@ export function respostaDemo(caminho: string): unknown | undefined {
   if (caminho.startsWith('/api/equipe')) return equipeDemo;
   if (caminho.startsWith('/api/tarefas')) return tarefasDemo;
   if (caminho.startsWith('/api/agenda')) return agendaDemo;
+  if (caminho.startsWith('/api/contatos/linha-do-tempo')) return { eventos: [] };
   return undefined;
 }

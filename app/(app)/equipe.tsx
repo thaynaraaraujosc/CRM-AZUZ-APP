@@ -1,14 +1,18 @@
+import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useEquipe } from '@/api/recursos';
+import { convidarMembro, FUNCOES_DE_EQUIPE, useEquipe } from '@/api/recursos';
 import { useAoPerderSessao } from '@/api/sessao';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
+import { FolhaDeCriacao } from '@/components/FolhaDeCriacao';
 import {
   Avatar,
   BotaoIcone,
   Cabecalho,
+  Campo,
   Cartao,
+  Chip,
   Indicador,
   ListaVazia,
   Secundario,
@@ -42,6 +46,33 @@ export default function EquipeScreen() {
   const aoPerderSessao = useAoPerderSessao();
   const { dados, carregando, erro, recarregar } = useEquipe(aoPerderSessao);
 
+  const [convidando, setConvidando] = useState(false);
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [funcao, setFuncao] = useState<(typeof FUNCOES_DE_EQUIPE)[number]>(FUNCOES_DE_EQUIPE[0]);
+  const [salvando, setSalvando] = useState(false);
+  const [falha, setFalha] = useState<string | null>(null);
+
+  async function convidar() {
+    if (!nome.trim() || !email.trim()) {
+      setFalha('Nome e e-mail são obrigatórios.');
+      return;
+    }
+    setSalvando(true);
+    setFalha(null);
+    try {
+      await convidarMembro({ nome: nome.trim(), email: email.trim(), funcao });
+      setConvidando(false);
+      setNome('');
+      setEmail('');
+      recarregar();
+    } catch (e) {
+      setFalha(e instanceof Error ? e.message : 'Não foi possível convidar.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   const membros = (dados ?? []).map((m) => ({
     id: m.id,
     nome: m.nome,
@@ -61,7 +92,7 @@ export default function EquipeScreen() {
         titulo="Equipe"
         sub={carregando ? 'Carregando…' : `${membros.length} pessoas · ${ativos.length} com acesso`}
         voltar
-        acao={<BotaoIcone icone="person-add-outline" cor={c.acaoTexto} fundo={c.acao} />}
+        acao={<BotaoIcone icone="person-add-outline" cor={c.acaoTexto} fundo={c.acao} onPress={() => setConvidando(true)} />}
       />
 
       {erro ? (
@@ -124,6 +155,29 @@ export default function EquipeScreen() {
           ) : null}
         </ScrollView>
       )}
+
+      <FolhaDeCriacao
+        aberta={convidando}
+        titulo="Convidar para a equipe"
+        descricao="A pessoa entra sem acesso até aceitar o convite e criar a senha."
+        salvando={salvando}
+        erro={falha}
+        aoFechar={() => setConvidando(false)}
+        aoSalvar={convidar}
+        rotuloSalvar="Enviar convite"
+      >
+        <Campo rotulo="Nome" placeholder="Nome completo" valor={nome} aoMudar={setNome} />
+        <Campo rotulo="E-mail" placeholder="email@empresa.com.br" valor={email} aoMudar={setEmail} teclado="email-address" />
+
+        <View style={{ gap: space[2] }}>
+          <Secundario>Função</Secundario>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space[2] }}>
+            {FUNCOES_DE_EQUIPE.map((f) => (
+              <Chip key={f.id} texto={f.nome} ativo={funcao.id === f.id} onPress={() => setFuncao(f)} />
+            ))}
+          </View>
+        </View>
+      </FolhaDeCriacao>
     </SafeAreaView>
   );
 }
