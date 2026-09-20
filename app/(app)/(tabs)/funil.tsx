@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -41,6 +41,9 @@ import { usePermissoes } from '@/api/permissoes';
 import { TelaSemPermissao } from '@/components/TelaSemPermissao';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+
+/** Tempo sem sinal do gesto até o quadro se destravar sozinho. */
+const SEGUNDOS_ATE_DESTRAVAR = 10;
 
 /** Faixa nas bordas do quadro que faz a rolagem andar sozinha enquanto se arrasta um card. */
 const ZONA_DE_ROLAGEM = 56;
@@ -132,6 +135,10 @@ const CardArrastavel = memo(function CardArrastavel({
     .onFinalize((_e, sucesso) => {
       arraste.arrastando.value = 0;
       if (!sucesso) runOnJS(arraste.cancelar)();
+    })
+    .onTouchesCancelled(() => {
+      arraste.arrastando.value = 0;
+      runOnJS(arraste.cancelar)();
     });
 
   const abrir = Gesture.Tap().onEnd(() => {
@@ -207,7 +214,13 @@ export default function FunilScreen() {
   const arrastando = useSharedValue(0);
   const alvo = useSharedValue(-1);
   const totalEtapas = useSharedValue(etapas.length);
-  totalEtapas.value = etapas.length;
+
+  // Escrever num valor compartilhado durante o desenho da tela é justamente o que o Reanimated
+  // avisa para não fazer: o desenho e a animação rodam em linhas de execução diferentes, e o valor
+  // pode chegar pela metade. Aqui ele é atualizado depois que a tela termina de desenhar.
+  useEffect(() => {
+    totalEtapas.value = etapas.length;
+  }, [etapas.length, totalEtapas]);
 
   const quadroRef = useRef<View>(null);
 
@@ -239,13 +252,41 @@ export default function FunilScreen() {
   // na hora, e o estado só chega no próximo desenho da tela.
   const noArRef = useRef<EmArraste>(null);
 
+  /**
+   * Rede de segurança do arraste.
+   *
+   * Enquanto um card está no ar, o quadro não rola. Se por qualquer motivo o fim do gesto não
+   * chegar — e no celular isso acontece: chamada entrando, aplicativo indo para segundo plano —
+   * o funil ficaria travado até fechar e abrir. Este relógio devolve o quadro ao normal sozinho.
+   */
+  const relogioDeSeguranca = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const pararRelogio = useCallback(() => {
+    if (relogioDeSeguranca.current) {
+      clearTimeout(relogioDeSeguranca.current);
+      relogioDeSeguranca.current = null;
+    }
+  }, []);
+
+  /** Recomeça a contagem a cada sinal de vida do gesto. */
+  const armarRelogio = useCallback(() => {
+    pararRelogio();
+    relogioDeSeguranca.current = setTimeout(() => {
+      encerrarArrasteRef.current();
+    }, SEGUNDOS_ATE_DESTRAVAR * 1000);
+  }, [pararRelogio]);
+
+  /** `encerrarArraste` é definido logo abaixo; a referência evita a dependência circular. */
+  const encerrarArrasteRef = useRef<() => void>(() => {});
+
   const comecarArraste = useCallback(
     (negocio: NegocioNaTela, etapaOrigem: string) => {
       noArRef.current = { negocio, etapaOrigem };
       setEmArraste({ negocio, etapaOrigem });
       rolagemAutomatica.setActive(true);
+      armarRelogio();
     },
-    [rolagemAutomatica],
+    [armarRelogio, rolagemAutomatica],
   );
 
   /**
@@ -257,13 +298,14 @@ export default function FunilScreen() {
    * fim de gesto passa por aqui.
    */
   const encerrarArraste = useCallback(() => {
+    pararRelogio();
     noArRef.current = null;
     rolagemAutomatica.setActive(false);
     arrastando.value = 0;
     alvo.value = -1;
     setEtapaAlvo(-1);
     setEmArraste(null);
-  }, [alvo, arrastando, rolagemAutomatica]);
+  }, [alvo, arrastando, pararRelogio, rolagemAutomatica]);
 
   /**
    * Solta o card na etapa sob o dedo: move na tela primeiro e grava em seguida.
@@ -299,6 +341,18 @@ export default function FunilScreen() {
 
   const abrirNegocio = useCallback((negocioId: string) => router.push(`/negocio/${negocioId}`), [router]);
 
+  const mudarAlvo = useCallback(
+    (indice: number) => {
+      setEtapaAlvo(indice);
+      armarRelogio();
+    },
+    [armarRelogio],
+  );
+
+  useEffect(() => {
+    encerrarArrasteRef.current = encerrarArraste;
+  }, [encerrarArraste]);
+
   // Identidade estável: se esse objeto mudasse a cada desenho, todo card mudaria junto.
   const arraste = useMemo<Arraste>(
     () => ({
@@ -310,7 +364,7 @@ export default function FunilScreen() {
       quadroX,
       totalEtapas,
       comecar: comecarArraste,
-      mudarAlvo: setEtapaAlvo,
+      mudarAlvo: mudarAlvo,
       soltar,
       cancelar: encerrarArraste,
       abrir: abrirNegocio,
@@ -323,6 +377,7 @@ export default function FunilScreen() {
       dedoX,
       dedoY,
       encerrarArraste,
+      mudarAlvo,
       quadroX,
       rolagem,
       soltar,
