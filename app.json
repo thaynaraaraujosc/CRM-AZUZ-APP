@@ -28,7 +28,13 @@
       "output": "single"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O AZUZ CRM usa as suas fotos só para você escolher a sua foto de perfil."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
