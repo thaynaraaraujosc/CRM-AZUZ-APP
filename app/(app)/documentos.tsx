@@ -1,106 +1,101 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BarraBusca, BotaoIcone, Cabecalho, Cartao, Chip, Divisor, Secundario, TituloSecao } from '@/components/ui';
-import { documentos } from '@/mock/dados';
+import { useDocumentos } from '@/api/recursos';
+import { useAoPerderSessao } from '@/api/sessao';
+import { Carregando, FalhaAoCarregar } from '@/components/estados';
+import { BarraBusca, Cabecalho, Cartao, Divisor, ListaVazia, Secundario, Selo } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
-const PASTAS = ['Tudo', 'Contratos', 'Propostas', 'Materiais', 'Enviados'];
+function dataCurta(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('pt-BR');
+}
 
-/** Biblioteca de documentos do workspace — modelos e arquivos anexados a negócios. */
+/** Documentos do workspace. Criar e editar continua no CRM pelo computador. */
 export default function DocumentosScreen() {
   const c = useCores();
+  const aoPerderSessao = useAoPerderSessao();
+  const { dados, carregando, erro, recarregar } = useDocumentos(aoPerderSessao);
+
+  const [busca, setBusca] = useState('');
+
+  const documentos = (dados ?? []).filter((d) =>
+    busca.trim() ? d.titulo.toLowerCase().includes(busca.trim().toLowerCase()) : true,
+  );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
       <Cabecalho
         titulo="Documentos"
-        sub={`${documentos.length} arquivos · 580 KB`}
+        sub={carregando ? 'Carregando…' : `${(dados ?? []).length} arquivos`}
         voltar
-        acao={<BotaoIcone icone="cloud-upload-outline" cor={c.acaoTexto} fundo={c.acao} />}
       />
 
-      <View style={{ backgroundColor: c.surface, paddingHorizontal: space[4], paddingTop: space[3], gap: space[3] }}>
-        <BarraBusca placeholder="Buscar documento" />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: space[2], paddingBottom: space[3] }}
-        >
-          {PASTAS.map((p, i) => (
-            <Chip key={p} texto={p} ativo={i === 0} />
-          ))}
-        </ScrollView>
+      <View style={{ backgroundColor: c.surface, paddingHorizontal: space[4], paddingVertical: space[3] }}>
+        <BarraBusca placeholder="Buscar documento" valor={busca} aoMudar={setBusca} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={{ padding: space[4], paddingBottom: space[7], gap: space[4] }}
-        showsVerticalScrollIndicator={false}
-      >
-        <TituloSecao titulo="Arquivos" contagem={documentos.length} />
-
-        <Cartao padding={0} style={{ overflow: 'hidden' }}>
-          {documentos.map((d, i) => (
-            <View key={d.id}>
-              {i > 0 ? <Divisor /> : null}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[3] }}>
-                <View
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: radius.md,
-                    backgroundColor: d.tipo === 'PDF' ? c.dangerSoft : c.blueSoft,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: d.tipo === 'PDF' ? c.danger : c.blue,
-                      fontSize: 9,
-                      fontWeight: fontWeight.bold,
-                    }}
-                  >
-                    {d.tipo}
-                  </Text>
-                </View>
-
-                <View style={{ flex: 1 }}>
-                  <Text numberOfLines={1} style={{ color: c.ink, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>
-                    {d.nome}
-                  </Text>
-                  <Secundario style={{ marginTop: 2 }}>
-                    {d.tamanho} · {d.data}
-                  </Secundario>
-                </View>
-
-                <Ionicons name="ellipsis-vertical" size={16} color={c.textFaint} />
-              </View>
-            </View>
-          ))}
-        </Cartao>
-
-        <Cartao
-          style={{
-            alignItems: 'center',
-            gap: space[2],
-            borderStyle: 'dashed',
-            borderWidth: 1,
-            borderColor: c.lineStrong,
-            paddingVertical: space[6],
-          }}
+      {erro ? (
+        <FalhaAoCarregar mensagem={erro} aoTentar={recarregar} />
+      ) : carregando && documentos.length === 0 ? (
+        <Carregando texto="Buscando seus documentos" />
+      ) : (
+        <ScrollView
+          contentContainerStyle={{ padding: space[4], paddingBottom: space[7], gap: space[4] }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={carregando} onRefresh={recarregar} tintColor={c.blue} />}
         >
-          <Ionicons name="cloud-upload-outline" size={26} color={c.textFaint} />
-          <Text style={{ color: c.ink, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>Enviar arquivo</Text>
-          <Text style={{ color: c.textMuted, fontSize: fontSize.sm, textAlign: 'center' }}>
-            PDF, DOCX, imagem ou planilha até 20 MB
-          </Text>
-        </Cartao>
+          {documentos.length === 0 ? (
+            <ListaVazia
+              icone="folder-outline"
+              titulo={(dados ?? []).length === 0 ? 'Nenhum documento ainda' : 'Nada com essa busca'}
+              descricao="Contratos, propostas e modelos criados no CRM aparecem aqui."
+            />
+          ) : (
+            <Cartao padding={0} style={{ overflow: 'hidden' }}>
+              {documentos.map((d, i) => (
+                <View key={d.id}>
+                  {i > 0 ? <Divisor /> : null}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3], padding: space[3] }}>
+                    <View
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: radius.md,
+                        backgroundColor: c.gray100,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="document-outline" size={17} color={c.ink} />
+                    </View>
 
-        <View style={{ height: StyleSheet.hairlineWidth }} />
-      </ScrollView>
+                    <View style={{ flex: 1 }}>
+                      <Text numberOfLines={1} style={{ color: c.ink, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>
+                        {d.titulo}
+                      </Text>
+                      <Secundario>
+                        {[d.autor, dataCurta(d.atualizadoEm)].filter(Boolean).join(' · ')}
+                      </Secundario>
+                    </View>
+
+                    {d.favorito ? <Ionicons name="star" size={14} color={c.warning} /> : null}
+                  </View>
+                </View>
+              ))}
+            </Cartao>
+          )}
+
+          <Secundario>
+            Escrever e editar documento é trabalho de tela grande, e continua no CRM pelo computador.
+          </Secundario>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

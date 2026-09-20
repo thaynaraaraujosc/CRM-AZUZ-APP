@@ -440,7 +440,15 @@ export function Campo({
 }
 
 /** Barra de busca das listas (Contatos, Conversas, Documentos…). */
-export function BarraBusca({ placeholder = 'Buscar' }: { placeholder?: string }) {
+export function BarraBusca({
+  placeholder = 'Buscar',
+  valor,
+  aoMudar,
+}: {
+  placeholder?: string;
+  valor?: string;
+  aoMudar?: (texto: string) => void;
+}) {
   const c = useCores();
   return (
     <View
@@ -458,8 +466,10 @@ export function BarraBusca({ placeholder = 'Buscar' }: { placeholder?: string })
     >
       <Ionicons name="search" size={16} color={c.textFaint} />
       <TextInput
+        {...(aoMudar ? { value: valor, onChangeText: aoMudar } : {})}
         placeholder={placeholder}
         placeholderTextColor={c.textFaint}
+        autoCorrect={false}
         style={{ flex: 1, color: c.ink, fontSize: fontSize.base }}
       />
     </View>

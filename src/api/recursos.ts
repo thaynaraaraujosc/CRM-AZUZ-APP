@@ -8,8 +8,15 @@ import type {
   Conversa,
   Funil,
   HistoricoDeMensagens,
+  CanalDisponivel,
+  DocumentoApi,
+  FluxoAutomacao,
+  FormularioApi,
   MembroDaEquipe,
+  RelatorioGerado,
+  RespostaDaIa,
   RespostaLinhaDoTempo,
+  SessaoAtiva,
 } from './tipos';
 
 /** Estado de uma busca: o suficiente para a tela mostrar carregando, erro ou dado. */
@@ -168,6 +175,51 @@ export function moverNegocio(cardId: string, etapaId: string) {
     metodo: 'POST',
     corpo: { cardId, etapaId },
   });
+}
+
+export const useAutomacoes = (aoPerderSessao?: () => void) =>
+  useRecurso<FluxoAutomacao[]>('/api/automacoes-fluxos', aoPerderSessao);
+
+export const useFormularios = (aoPerderSessao?: () => void) =>
+  useRecurso<FormularioApi[]>('/api/formularios', aoPerderSessao);
+
+export const useDocumentos = (aoPerderSessao?: () => void) =>
+  useRecurso<DocumentoApi[]>('/api/documentos', aoPerderSessao);
+
+export const useCanais = (aoPerderSessao?: () => void) =>
+  useRecurso<CanalDisponivel[]>('/api/canais', aoPerderSessao);
+
+export const useSessoesAtivas = (aoPerderSessao?: () => void) =>
+  useRecurso<SessaoAtiva[]>('/api/seguranca/sessoes', aoPerderSessao);
+
+export const useRelatorios = (aoPerderSessao?: () => void) =>
+  useRecurso<RelatorioGerado[]>('/api/relatorios', aoPerderSessao);
+
+export const useMotivosDePerda = (aoPerderSessao?: () => void) =>
+  useRecurso<string[]>('/api/motivos-perda', aoPerderSessao);
+
+/** Liga e desliga um fluxo de automação. */
+export function alternarAutomacao(fluxoId: string, ativa: boolean) {
+  return chamar<unknown>(`/api/automacoes-fluxos/${fluxoId}`, { metodo: 'PATCH', corpo: { ativa } });
+}
+
+/** Encerra uma sessão aberta em outro aparelho. */
+export function encerrarSessao(sessaoId: string) {
+  return chamar<unknown>(`/api/seguranca/sessoes/${sessaoId}`, { metodo: 'DELETE' });
+}
+
+/** Pergunta para a Azuz IA. O histórico dá contexto à resposta. */
+export function perguntarParaIa(mensagem: string, historico: { papel: 'usuario' | 'ia'; texto: string }[]) {
+  return chamar<RespostaDaIa>('/api/azuz-ia/perguntar', { metodo: 'POST', corpo: { mensagem, historico } });
+}
+
+/** Preferência do workspace guardada por chave (usada pelos avisos). */
+export function lerPreferencia<T>(chave: string) {
+  return chamar<T>(`/api/preferencias/${chave}`);
+}
+
+export function gravarPreferencia(chave: string, dados: unknown) {
+  return chamar<unknown>(`/api/preferencias/${chave}`, { metodo: 'PUT', corpo: dados });
 }
 
 /* -------------------------------------------------------------------------- */

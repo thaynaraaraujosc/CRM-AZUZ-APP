@@ -171,3 +171,68 @@ export type EventoDoContato = {
 };
 
 export type RespostaLinhaDoTempo = { eventos: EventoDoContato[] };
+
+/* -------------------------------------------------------------------------- */
+/* Automações, formulários, documentos, canais, segurança                     */
+/* -------------------------------------------------------------------------- */
+
+export type FluxoAutomacao = {
+  id: string;
+  nome: string;
+  descricao?: string;
+  categoria?: string;
+  status: 'rascunho' | 'publicado';
+  ativa: boolean;
+  arquivada?: boolean;
+  execucoes: number;
+  atualizadoEm: string;
+  nodes?: unknown[];
+};
+
+export type FormularioApi = {
+  id: string;
+  nome: string;
+  descricao?: string | null;
+  status: string;
+  criadoEm: string;
+  atualizadoEm: string;
+};
+
+export type DocumentoApi = {
+  id: string;
+  titulo: string;
+  autor: string;
+  favorito?: boolean;
+  criadoEm: string;
+  atualizadoEm: string;
+};
+
+/** `/api/canais` — o que o CRM tem conectado hoje para falar com o cliente. */
+export type CanalDisponivel = {
+  canal: string;
+  label: string;
+  conectado: boolean;
+  detalhe?: string | null;
+  motivo?: string;
+};
+
+export type SessaoAtiva = {
+  id: string;
+  dispositivo: string;
+  ip?: string | null;
+  criadoEm: string;
+  atual: boolean;
+};
+
+export type RelatorioGerado = {
+  id: string;
+  nome: string;
+  tipo: string;
+  periodo?: string;
+  autor: string;
+  /** Já vem formatada pelo servidor em pt-BR. */
+  data: string;
+  formato?: string;
+};
+
+export type RespostaDaIa = { resposta: string };
