@@ -6,6 +6,7 @@ import type {
   Compromisso,
   Contato,
   Conversa,
+  EstadoDaIntegracao,
   Funil,
   HistoricoDeMensagens,
   CanalDisponivel,
@@ -197,6 +198,10 @@ export const useRelatorios = (aoPerderSessao?: () => void) =>
 
 export const useMotivosDePerda = (aoPerderSessao?: () => void) =>
   useRecurso<string[]>('/api/motivos-perda', aoPerderSessao);
+
+/** Estado de uma integração (Instagram, Meta Ads…). `/api/canais` cobre só os canais de envio. */
+export const useIntegracao = (provedor: string, aoPerderSessao?: () => void) =>
+  useRecurso<EstadoDaIntegracao>(`/api/integracoes/meta?provedor=${provedor}`, aoPerderSessao);
 
 /** Liga e desliga um fluxo de automação. */
 export function alternarAutomacao(fluxoId: string, ativa: boolean) {

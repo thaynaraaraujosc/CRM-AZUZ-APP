@@ -2,9 +2,11 @@ import { useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Cabecalho, Cartao, Divisor, LinhaMenu, Selo, TituloSecao } from '@/components/ui';
 import { usePermissoes } from '@/api/permissoes';
+import { useCanais, useFunis } from '@/api/recursos';
+import { useAoPerderSessao } from '@/api/sessao';
 import { TelaSemPermissao } from '@/components/TelaSemPermissao';
+import { Cabecalho, Cartao, Divisor, LinhaMenu, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
 import { space } from '@/theme/tokens';
 
@@ -16,8 +18,19 @@ export default function ConfiguracoesScreen() {
   const { pode } = usePermissoes();
   if (!pode('configuracoes')) return <TelaSemPermissao titulo="Configurações" modulo="configurações" voltar={true} />;
 
+  return <Configuracoes />;
+}
+
+function Configuracoes() {
   const c = useCores();
   const router = useRouter();
+  const aoPerderSessao = useAoPerderSessao();
+
+  const { dados: canais } = useCanais(aoPerderSessao);
+  const { dados: funis } = useFunis(aoPerderSessao);
+
+  const conectados = (canais ?? []).filter((canal) => canal.conectado).length;
+  const etapas = (funis ?? []).reduce((soma, f) => soma + f.colunas.length, 0);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
@@ -28,7 +41,7 @@ export default function ConfiguracoesScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={{ gap: space[3] }}>
-          <TituloSecao titulo="Workspace" />
+          <TituloSecao titulo="No aplicativo" />
           <Cartao padding={0} style={{ overflow: 'hidden' }}>
             <LinhaMenu
               icone="color-palette-outline"
@@ -40,73 +53,52 @@ export default function ConfiguracoesScreen() {
             <LinhaMenu
               icone="notifications-outline"
               titulo="Notificações"
-              sub="O que avisa, e por qual canal"
+              sub="O que merece interromper"
               onPress={() => router.push('/configuracoes/notificacoes')}
             />
-            <Divisor />
-            <LinhaMenu icone="pricetags-outline" titulo="Etiquetas" sub="6 etiquetas em uso" />
-            <Divisor />
-            <LinhaMenu icone="git-branch-outline" titulo="Funis e etapas" sub="2 funis · 8 etapas" />
           </Cartao>
         </View>
 
         <View style={{ gap: space[3] }}>
-          <TituloSecao titulo="Canais e integrações" />
+          <TituloSecao titulo="Workspace" />
           <Cartao padding={0} style={{ overflow: 'hidden' }}>
             <LinhaMenu
-              icone="logo-whatsapp"
-              titulo="WhatsApp"
-              sub="2 números conectados"
-              direita={<Selo texto="Conectado" cor={c.success} fundo={c.successSoft} />}
+              icone="chatbubbles-outline"
+              titulo="Canais e integrações"
+              sub={conectados === 1 ? '1 canal conectado' : `${conectados} canais conectados`}
               onPress={() => router.push('/configuracoes/conexoes')}
             />
             <Divisor />
             <LinhaMenu
-              icone="logo-instagram"
-              titulo="Instagram"
-              sub="@empresademo"
-              direita={<Selo texto="Conectado" cor={c.success} fundo={c.successSoft} />}
-              onPress={() => router.push('/configuracoes/conexoes')}
+              icone="git-branch-outline"
+              titulo="Funis e etapas"
+              sub={`${(funis ?? []).length} funis · ${etapas} etapas`}
+              onPress={() => router.push('/funil')}
             />
             <Divisor />
-            <LinhaMenu
-              icone="mail-outline"
-              titulo="E-mail"
-              sub="Nenhuma caixa conectada"
-              direita={<Selo texto="Pendente" cor={c.warning} fundo={c.warningSoft} />}
-              onPress={() => router.push('/configuracoes/conexoes')}
-            />
-            <Divisor />
-            <LinhaMenu
-              icone="extension-puzzle-outline"
-              titulo="Outras integrações"
-              sub="Meta Ads, Google Ads, Google Agenda"
-              onPress={() => router.push('/configuracoes/conexoes')}
-            />
-          </Cartao>
-        </View>
-
-        <View style={{ gap: space[3] }}>
-          <TituloSecao titulo="Conta" />
-          <Cartao padding={0} style={{ overflow: 'hidden' }}>
             <LinhaMenu
               icone="shield-checkmark-outline"
               titulo="Segurança"
               sub="Senha, sessões e permissões"
               onPress={() => router.push('/configuracoes/seguranca')}
             />
-            <Divisor />
-            <LinhaMenu icone="time-outline" titulo="Auditoria" sub="Quem fez o quê, e quando" />
-            <Divisor />
-            <LinhaMenu icone="cloud-download-outline" titulo="Importação de dados" sub="Planilha ou outro CRM" />
-            <Divisor />
+          </Cartao>
+        </View>
+
+        <View style={{ gap: space[3] }}>
+          <TituloSecao titulo="Assinatura" />
+          <Cartao padding={0} style={{ overflow: 'hidden' }}>
             <LinhaMenu
               icone="card-outline"
-              titulo="Assinatura"
-              sub="Plano e pagamento são geridos no site"
+              titulo="Plano e pagamento"
+              sub="Geridos no site do CRM"
               direita={<Selo texto="No site" />}
             />
           </Cartao>
+          <Secundario>
+            Etiquetas, auditoria e importação de dados ficam no CRM pelo computador — são telas de
+            tabela larga, que não caberiam aqui sem virar outra coisa.
+          </Secundario>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -238,3 +238,11 @@ export type RelatorioGerado = {
 };
 
 export type RespostaDaIa = { resposta: string };
+
+/** `/api/integracoes/meta?provedor=…` — estado de uma integração, sem token nenhum. */
+export type EstadoDaIntegracao = {
+  status: string;
+  metadados?: Record<string, unknown> | null;
+  erroMensagem?: string | null;
+  atualizadoEm?: string | null;
+};
