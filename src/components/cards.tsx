@@ -64,7 +64,15 @@ function iconeDoCanal(canal: string) {
  * contínua e achar onde uma termina depende de ler o texto. A barra de 2px na esquerda é o que
  * marca não lida.
  */
-export function LinhaConversa({ conversa, onPress }: { conversa: ConversaNaTela; onPress?: () => void }) {
+export function LinhaConversa({
+  conversa,
+  onPress,
+  onLongPress,
+}: {
+  conversa: ConversaNaTela;
+  onPress?: () => void;
+  onLongPress?: () => void;
+}) {
   const c = useCores();
   const sombra = useSombra();
   const naoLida = conversa.naoLidas > 0;
@@ -72,6 +80,8 @@ export function LinhaConversa({ conversa, onPress }: { conversa: ConversaNaTela;
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={280}
       style={({ pressed }) => ({
         flexDirection: 'row',
         gap: space[3],

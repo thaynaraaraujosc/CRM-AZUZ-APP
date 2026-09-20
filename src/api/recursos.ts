@@ -170,6 +170,25 @@ export function enviarMensagem(conversaNome: string, texto: string) {
   });
 }
 
+/**
+ * Muda campos pontuais de uma conversa: marcar como lida, favoritar, arquivar ou mudar o status.
+ * É a mesma rota que o painel web usa.
+ */
+export function mudarConversa(
+  conversaId: string,
+  dados: { naoLidas?: number; favorita?: boolean; arquivada?: boolean; status?: string },
+) {
+  return chamar<unknown>(`/api/conversas/${conversaId}`, { metodo: 'PATCH', corpo: dados });
+}
+
+/** Abre uma conversa nova com alguém que ainda não escreveu. `contato` é o telefone. */
+export function criarConversa(nome: string, contato: string, canal = 'WhatsApp') {
+  return chamar<Conversa>('/api/conversas', { metodo: 'POST', corpo: { nome, contato, canal } });
+}
+
+/** Os quatro status de conversa do CRM. */
+export const STATUS_DE_CONVERSA = ['Não respondido', 'Em conversa', 'Aguardando cliente', 'Finalizado'] as const;
+
 /** Move um negócio de etapa. Mesma rota que o painel web usa ao arrastar um card. */
 export function moverNegocio(cardId: string, etapaId: string) {
   return chamar<{ ok: boolean }>('/api/funis/mover', {

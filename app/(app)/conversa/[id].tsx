@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -16,17 +17,27 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { conversaNaTela } from '@/api/adaptar';
 import { usePermissoes } from '@/api/permissoes';
-import { enviarMensagem, useConversas, useHistoricoDeMensagens } from '@/api/recursos';
-import { useAoPerderSessao } from '@/api/sessao';
+import {
+  criarNegocio,
+  criarTarefa,
+  enviarMensagem,
+  mudarConversa,
+  perguntarParaIa,
+  useConversas,
+  useFunis,
+  useHistoricoDeMensagens,
+} from '@/api/recursos';
+import { useAoPerderSessao, useSessao } from '@/api/sessao';
 import type { Mensagem } from '@/api/tipos';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
+import { FolhaDeCriacao } from '@/components/FolhaDeCriacao';
 import { TagOrigem } from '@/components/funil';
 import { TelaSemPermissao } from '@/components/TelaSemPermissao';
-import { Avatar, Chip, ListaVazia, Selo } from '@/components/ui';
+import { Avatar, Aviso, Campo, Chip, Divisor, LinhaMenu, ListaVazia, Secundario, Selo } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
-const ACOES_RAPIDAS = ['Atribuir ao funil', 'Criar tarefa', 'Marcar como resolvida', 'Resumir com IA'];
+
 
 /** Conversa aberta: histórico real do CRM e envio pelo mesmo caminho que o painel web usa. */
 export default function ConversaScreen() {
@@ -42,6 +53,7 @@ function Conversa() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const aoPerderSessao = useAoPerderSessao();
 
+  const { usuario } = useSessao();
   const listaRef = useRef<ScrollView>(null);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -51,6 +63,18 @@ function Conversa() {
 
   const conversas = useConversas(aoPerderSessao);
   const historico = useHistoricoDeMensagens(aoPerderSessao);
+  const funis = useFunis(aoPerderSessao);
+
+  /** Ações do rodapé e do menu de três pontos. */
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState<string | null>(null);
+  const [resumo, setResumo] = useState<string | null>(null);
+  const [criandoTarefa, setCriandoTarefa] = useState(false);
+  const [tituloTarefa, setTituloTarefa] = useState('');
+  const [prazoTarefa, setPrazoTarefa] = useState('Hoje, 17:00');
+  const [salvandoTarefa, setSalvandoTarefa] = useState(false);
+  const [falhaNaTarefa, setFalhaNaTarefa] = useState<string | null>(null);
 
   const linha = (conversas.dados ?? []).find((cv) => cv.id === id);
   const conversa = linha ? conversaNaTela(linha) : null;
@@ -69,6 +93,19 @@ function Conversa() {
     const t = setTimeout(() => listaRef.current?.scrollToEnd({ animated: false }), 80);
     return () => clearTimeout(t);
   }, [mensagens.length]);
+
+  // Abrir a conversa é ler a conversa: o contador de não lidas zera no CRM, como no web.
+  const naoLidas = linha?.naoLidas ?? 0;
+  useEffect(() => {
+    if (!id || naoLidas === 0) return;
+    mudarConversa(id, { naoLidas: 0 })
+      .then(() => conversas.recarregar())
+      .catch(() => {
+        // Não vale interromper a leitura por causa do contador.
+      });
+    // Só quando a conversa abre com mensagem nova.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, naoLidas > 0]);
 
   async function enviar() {
     const conteudo = texto.trim();
@@ -91,6 +128,117 @@ function Conversa() {
       setFalha(e instanceof Error ? e.message : 'Não foi possível enviar.');
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function mudarStatus(status: string) {
+    if (!id) return;
+    setMenuAberto(false);
+    setOcupado(status);
+    try {
+      await mudarConversa(id, { status });
+      conversas.recarregar();
+      setAviso(`Conversa marcada como "${status}".`);
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : 'Não deu para mudar o status.');
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  async function alternarFavorita() {
+    if (!id || !linha) return;
+    setMenuAberto(false);
+    try {
+      await mudarConversa(id, { favorita: !linha.favorita });
+      conversas.recarregar();
+      setAviso(linha.favorita ? 'Saiu dos favoritos.' : 'Conversa favoritada.');
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : 'Não deu para favoritar.');
+    }
+  }
+
+  async function arquivar() {
+    if (!id || !linha) return;
+    setMenuAberto(false);
+    try {
+      await mudarConversa(id, { arquivada: !linha.arquivada });
+      conversas.recarregar();
+      setAviso(linha.arquivada ? 'Conversa de volta à lista.' : 'Conversa arquivada.');
+      if (!linha.arquivada) router.back();
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : 'Não deu para arquivar.');
+    }
+  }
+
+  /** Põe o contato no funil: um negócio novo na primeira etapa do primeiro funil. */
+  async function levarParaOFunil() {
+    if (!conversa) return;
+    const lista = funis.dados ?? [];
+    const primeiro = lista[0];
+    const etapa = primeiro?.colunas[0];
+    if (!primeiro || !etapa) {
+      setAviso('Nenhum funil com etapa ainda. Crie um funil primeiro.');
+      return;
+    }
+
+    setMenuAberto(false);
+    setOcupado('funil');
+    try {
+      await criarNegocio(lista, { nome: conversa.nome, origem: conversa.origem, etapaId: etapa.id });
+      funis.recarregar();
+      setAviso(`${conversa.nome} entrou no ${primeiro.nome}, na etapa ${etapa.titulo}.`);
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : 'Não deu para criar o negócio.');
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  async function resumirComIa() {
+    if (!conversa) return;
+    setMenuAberto(false);
+    setOcupado('ia');
+    setAviso(null);
+    try {
+      const { resposta } = await perguntarParaIa(
+        `Resuma a conversa com ${conversa.nome} em poucas linhas: o que a pessoa quer, em que pé está e qual o próximo passo.`,
+        [],
+      );
+      setResumo(resposta);
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : 'A IA não respondeu agora.');
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  async function salvarTarefa() {
+    if (!conversa) return;
+    if (!tituloTarefa.trim()) {
+      setFalhaNaTarefa('Escreva o que precisa ser feito.');
+      return;
+    }
+
+    setSalvandoTarefa(true);
+    setFalhaNaTarefa(null);
+    try {
+      await criarTarefa({
+        titulo: tituloTarefa.trim(),
+        contato: conversa.nome,
+        data: prazoTarefa.trim() || 'Hoje',
+        responsavel: {
+          nome: usuario?.name ?? 'Eu',
+          initials: usuario?.initials ?? (usuario?.name ?? 'EU').slice(0, 2).toUpperCase(),
+        },
+      });
+      setCriandoTarefa(false);
+      setTituloTarefa('');
+      setAviso('Tarefa criada.');
+    } catch (e) {
+      setFalhaNaTarefa(e instanceof Error ? e.message : 'Não deu para criar a tarefa.');
+    } finally {
+      setSalvandoTarefa(false);
     }
   }
 
@@ -127,7 +275,7 @@ function Conversa() {
           </View>
         </Pressable>
 
-        <Pressable hitSlop={8}>
+        <Pressable hitSlop={8} onPress={() => setMenuAberto(true)}>
           <Ionicons name="ellipsis-vertical" size={19} color={c.ink} />
         </Pressable>
       </View>
@@ -258,9 +406,29 @@ function Conversa() {
           style={{ flexGrow: 0 }}
           contentContainerStyle={{ gap: space[2], paddingHorizontal: space[4], paddingBottom: space[2] }}
         >
-          {ACOES_RAPIDAS.map((a) => (
-            <Chip key={a} texto={a} />
-          ))}
+          <Chip
+            texto={ocupado === 'funil' ? 'Levando ao funil…' : 'Levar para o funil'}
+            onPress={levarParaOFunil}
+            desabilitado={ocupado !== null}
+          />
+          <Chip
+            texto="Criar tarefa"
+            onPress={() => {
+              setTituloTarefa(conversa ? `Retornar para ${conversa.nome}` : '');
+              setFalhaNaTarefa(null);
+              setCriandoTarefa(true);
+            }}
+          />
+          <Chip
+            texto={ocupado === 'Finalizado' ? 'Finalizando…' : 'Finalizar conversa'}
+            onPress={() => mudarStatus('Finalizado')}
+            desabilitado={ocupado !== null}
+          />
+          <Chip
+            texto={ocupado === 'ia' ? 'A IA está lendo…' : 'Resumir com IA'}
+            onPress={resumirComIa}
+            desabilitado={ocupado !== null}
+          />
         </ScrollView>
 
         <View
@@ -276,10 +444,6 @@ function Conversa() {
             borderTopColor: c.line,
           }}
         >
-          <Pressable hitSlop={8} style={{ paddingBottom: 10 }}>
-            <Ionicons name="add-circle-outline" size={24} color={c.textMuted} />
-          </Pressable>
-
           <View
             style={{
               flex: 1,
@@ -327,6 +491,102 @@ function Conversa() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      {aviso ? (
+        <View style={{ position: 'absolute', left: space[4], right: space[4], bottom: 86 }}>
+          <Pressable onPress={() => setAviso(null)}>
+            <Aviso texto={aviso} />
+          </Pressable>
+        </View>
+      ) : null}
+
+      {/* Menu de três pontos: o que dá para fazer com a conversa inteira. */}
+      <Modal visible={menuAberto} transparent animationType="fade" onRequestClose={() => setMenuAberto(false)}>
+        <Pressable
+          onPress={() => setMenuAberto(false)}
+          style={{ flex: 1, backgroundColor: 'rgba(11, 21, 51, 0.35)', justifyContent: 'flex-end' }}
+        >
+          <View
+            style={{
+              backgroundColor: c.surface,
+              borderTopLeftRadius: radius.xl,
+              borderTopRightRadius: radius.xl,
+              paddingVertical: space[3],
+              paddingBottom: space[6],
+            }}
+          >
+            <LinhaMenu
+              icone={linha?.favorita ? 'star' : 'star-outline'}
+              titulo={linha?.favorita ? 'Tirar dos favoritos' : 'Favoritar'}
+              onPress={alternarFavorita}
+            />
+            <Divisor />
+            <LinhaMenu icone="swap-horizontal-outline" titulo="Marcar como em conversa" onPress={() => mudarStatus('Em conversa')} />
+            <Divisor />
+            <LinhaMenu
+              icone="hourglass-outline"
+              titulo="Marcar como aguardando cliente"
+              onPress={() => mudarStatus('Aguardando cliente')}
+            />
+            <Divisor />
+            <LinhaMenu
+              icone={linha?.arquivada ? 'arrow-undo-outline' : 'archive-outline'}
+              titulo={linha?.arquivada ? 'Desarquivar' : 'Arquivar conversa'}
+              onPress={arquivar}
+            />
+            <Divisor />
+            <LinhaMenu
+              icone="person-outline"
+              titulo="Abrir ficha do contato"
+              onPress={() => {
+                setMenuAberto(false);
+                if (conversa) router.push(`/contatos/${conversa.id}`);
+              }}
+            />
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Resumo da IA. Fica numa folha porque é texto para ler, não para editar. */}
+      <Modal visible={resumo !== null} transparent animationType="slide" onRequestClose={() => setResumo(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(11, 21, 51, 0.35)', justifyContent: 'flex-end' }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setResumo(null)} />
+          <SafeAreaView
+            edges={['bottom']}
+            style={{ backgroundColor: c.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl }}
+          >
+            <View style={{ padding: space[4], gap: space[3] }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+                <Ionicons name="sparkles" size={16} color={c.ia} />
+                <Text style={{ flex: 1, color: c.ink, fontSize: fontSize.md, fontWeight: fontWeight.bold }}>
+                  Resumo da conversa
+                </Text>
+                <Pressable onPress={() => setResumo(null)} hitSlop={10}>
+                  <Ionicons name="close" size={20} color={c.textMuted} />
+                </Pressable>
+              </View>
+              <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+                <Text style={{ color: c.ink, fontSize: fontSize.base, lineHeight: 22 }}>{resumo}</Text>
+              </ScrollView>
+              <Secundario>Feito pela Azuz IA com os dados do seu workspace. Pode conter erro.</Secundario>
+            </View>
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      <FolhaDeCriacao
+        aberta={criandoTarefa}
+        titulo="Nova tarefa"
+        descricao={conversa ? `Fica ligada a ${conversa.nome}.` : undefined}
+        salvando={salvandoTarefa}
+        erro={falhaNaTarefa}
+        aoFechar={() => setCriandoTarefa(false)}
+        aoSalvar={salvarTarefa}
+        rotuloSalvar="Criar tarefa"
+      >
+        <Campo rotulo="O que fazer" placeholder="Retornar ligação" valor={tituloTarefa} aoMudar={setTituloTarefa} />
+        <Campo rotulo="Prazo" placeholder="Hoje, 17:00" valor={prazoTarefa} aoMudar={setPrazoTarefa} />
+      </FolhaDeCriacao>
     </SafeAreaView>
   );
 }
