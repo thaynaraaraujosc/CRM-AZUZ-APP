@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { usePermissoes } from '@/api/permissoes';
@@ -8,9 +8,9 @@ import { useRelatorios } from '@/api/recursos';
 import { useAoPerderSessao } from '@/api/sessao';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
 import { TelaSemPermissao } from '@/components/TelaSemPermissao';
-import { Cabecalho, Cartao, Chip, Corpo, ListaVazia, Secundario, Selo, TituloSecao } from '@/components/ui';
+import { Aviso, Cabecalho, Cartao, Chip, Corpo, ListaVazia, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontWeight, radius, space } from '@/theme/tokens';
 
 const FILTROS = ['Todos', 'PDF', 'CSV'] as const;
 
@@ -107,15 +107,9 @@ function Relatorios() {
             ))}
           </View>
 
-          <Cartao style={{ gap: space[2] }}>
-            <Text style={{ color: c.ink, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>
-              Gerar um relatório novo
-            </Text>
-            <Secundario>
-              Gerar exige montar o arquivo e baixá-lo, o que acontece no CRM pelo computador. Aqui os
-              números ao vivo estão em Inteligência comercial, sem precisar gerar nada.
-            </Secundario>
-          </Cartao>
+          <Aviso
+            texto="Gerar relatório novo é no CRM pelo computador, porque termina em arquivo para baixar. Aqui, os números ao vivo estão em Inteligência comercial — sem precisar gerar nada."
+          />
         </ScrollView>
       )}
     </SafeAreaView>

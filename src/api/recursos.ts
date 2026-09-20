@@ -8,15 +8,16 @@ import type {
   Contato,
   Conversa,
   EstadoDaIntegracao,
+  FormularioCompleto,
   Funil,
   HistoricoDeMensagens,
   CanalDisponivel,
-  DocumentoApi,
   FluxoAutomacao,
   FormularioApi,
   MembroDaEquipe,
   RelatorioGerado,
   RespostaDaIa,
+  RespostaDeFormulario,
   RespostaLinhaDoTempo,
   SessaoAtiva,
 } from './tipos';
@@ -204,8 +205,13 @@ export const useAutomacoes = (aoPerderSessao?: () => void) =>
 export const useFormularios = (aoPerderSessao?: () => void) =>
   useRecurso<FormularioApi[]>('/api/formularios', aoPerderSessao);
 
-export const useDocumentos = (aoPerderSessao?: () => void) =>
-  useRecurso<DocumentoApi[]>('/api/documentos', aoPerderSessao);
+/** Um formulário inteiro, com as perguntas. */
+export const useFormulario = (id: string | undefined, aoPerderSessao?: () => void) =>
+  useRecurso<FormularioCompleto>(id ? `/api/formularios/${id}` : '', aoPerderSessao);
+
+/** Todas as respostas de formulário do workspace — a tela filtra pelo formulário que está aberto. */
+export const useRespostasDeFormularios = (aoPerderSessao?: () => void) =>
+  useRecurso<RespostaDeFormulario[]>('/api/formularios/respostas', aoPerderSessao);
 
 export const useCanais = (aoPerderSessao?: () => void) =>
   useRecurso<CanalDisponivel[]>('/api/canais', aoPerderSessao);

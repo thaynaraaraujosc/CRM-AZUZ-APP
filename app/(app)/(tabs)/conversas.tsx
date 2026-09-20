@@ -26,14 +26,12 @@ const SITUACOES = [
 
 /**
  * Canal fica numa linha separada da situação, como na web, porque são coisas independentes: dá
- * para querer "não lidas do Instagram". O TikTok aparece desligado de propósito, porque o canal
- * está anunciado no produto mas ainda não recebe mensagem, e esconder faria parecer que não existe.
+ * para querer "não lidas do Instagram". São os dois canais que recebem mensagem hoje, e um deles
+ * está sempre escolhido — a caixa de entrada é de um canal por vez.
  */
 const CANAIS = [
-  { valor: 'todos', rotulo: 'Todos os canais', emBreve: false },
-  { valor: 'WhatsApp', rotulo: 'WhatsApp', emBreve: false },
-  { valor: 'Instagram', rotulo: 'Instagram', emBreve: false },
-  { valor: 'TikTok', rotulo: 'TikTok', emBreve: true },
+  { valor: 'WhatsApp', rotulo: 'WhatsApp' },
+  { valor: 'Instagram', rotulo: 'Instagram' },
 ] as const;
 
 type Situacao = (typeof SITUACOES)[number]['valor'];
@@ -53,7 +51,7 @@ function Conversas() {
   const { dados, carregando, erro, recarregar } = useConversas(aoPerderSessao);
 
   const [situacao, setSituacao] = useState<Situacao>('tudo');
-  const [canal, setCanal] = useState<Canal>('todos');
+  const [canal, setCanal] = useState<Canal>('WhatsApp');
   const [busca, setBusca] = useState('');
 
   const [abrindoNova, setAbrindoNova] = useState(false);
@@ -77,7 +75,7 @@ function Conversas() {
     }
     if (sit === 'nao-lidas' && !(cv.naoLidas ?? 0)) return false;
     if (sit === 'favoritas' && !cv.favorita) return false;
-    if (can !== 'todos' && cv.canal !== can) return false;
+    if (cv.canal !== can) return false;
     return true;
   }
 
@@ -186,9 +184,8 @@ function Conversas() {
             return (
               <Chip
                 key={ch.valor}
-                texto={ch.emBreve ? `${ch.rotulo} · em breve` : quantidade > 0 ? `${ch.rotulo} (${quantidade})` : ch.rotulo}
+                texto={quantidade > 0 ? `${ch.rotulo} (${quantidade})` : ch.rotulo}
                 ativo={canal === ch.valor}
-                desabilitado={ch.emBreve}
                 onPress={() => setCanal(ch.valor)}
               />
             );
@@ -221,7 +218,7 @@ function Conversas() {
               descricao={
                 todas.length === 0
                   ? 'Quando um lead chamar por um canal conectado, ele aparece aqui.'
-                  : 'Troque a situação ou o canal para ver outras conversas.'
+                  : `Nenhuma conversa de ${canal} com esses filtros. Toque no outro canal para ver.`
               }
             />
           }

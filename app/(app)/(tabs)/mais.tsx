@@ -80,8 +80,6 @@ export default function MaisScreen() {
       rota: '/formularios',
       modulo: 'formularios',
     },
-    { icone: 'folder-outline', titulo: 'Documentos', sub: 'Contratos, propostas e modelos', rota: '/documentos' },
-    { icone: 'sparkles-outline', titulo: 'Azuz IA', sub: 'Pergunte sobre os seus dados', rota: '/azuz-ia' },
   ];
 
   const ANALISE: Item[] = [

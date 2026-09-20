@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { usePermissoes } from '@/api/permissoes';
@@ -7,9 +7,9 @@ import { useCanais, useIntegracao } from '@/api/recursos';
 import { useAoPerderSessao } from '@/api/sessao';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
 import { TelaSemPermissao } from '@/components/TelaSemPermissao';
-import { Cabecalho, Cartao, Corpo, Secundario, Selo, TituloSecao } from '@/components/ui';
+import { Aviso, Cabecalho, Cartao, Corpo, Secundario, Selo, TituloSecao } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
-import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { fontWeight, radius, space } from '@/theme/tokens';
 import type { ComponentProps } from 'react';
 
 type Icone = ComponentProps<typeof Ionicons>['name'];
@@ -136,15 +136,9 @@ function Conexoes() {
           <Lista titulo="Canais de atendimento" itens={linhasDeCanal} />
           <Lista titulo="Integrações" itens={linhasDeIntegracao} />
 
-          <Cartao style={{ gap: space[2] }}>
-            <Text style={{ color: c.ink, fontSize: fontSize.base, fontWeight: fontWeight.bold }}>
-              Conectar um canal novo
-            </Text>
-            <Secundario>
-              Conectar exige entrar na conta da Meta e escanear QR Code, o que só dá para fazer no CRM
-              pelo computador. Aqui o aplicativo mostra o estado e recebe as mensagens.
-            </Secundario>
-          </Cartao>
+          <Aviso
+            texto="Conectar canal novo é no CRM pelo computador, porque exige entrar na conta da Meta e escanear QR Code. Aqui o aplicativo mostra o estado e recebe as mensagens."
+          />
         </ScrollView>
       )}
     </SafeAreaView>

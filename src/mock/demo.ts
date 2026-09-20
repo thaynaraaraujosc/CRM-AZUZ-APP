@@ -212,6 +212,33 @@ export const formulariosDemo: FormularioApi[] = [
   },
 ];
 
+export const paginasDemo = [
+  {
+    id: 'pagina-1',
+    titulo: 'Dados de contato',
+    perguntas: [
+      { id: 'p-nome', tipo: 'texto', rotulo: 'Seu nome', obrigatoria: true },
+      { id: 'p-whats', tipo: 'texto', rotulo: 'WhatsApp com DDD', obrigatoria: true },
+      { id: 'p-quando', tipo: 'opcao_unica', rotulo: 'Melhor horário', opcoes: ['Manhã', 'Tarde'] },
+    ],
+  },
+];
+
+export const respostasDeFormularioDemo = [
+  {
+    id: 'resposta-1',
+    formularioId: 'form-avaliacao',
+    criadoEm: minutosAtras(120),
+    valores: { 'p-nome': 'Camila Duarte', 'p-whats': '(62) 99999-1234', 'p-quando': 'Tarde' },
+  },
+  {
+    id: 'resposta-2',
+    formularioId: 'form-avaliacao',
+    criadoEm: minutosAtras(900),
+    valores: { 'p-nome': 'Fernando Lima', 'p-whats': '(62) 98888-4321', 'p-quando': 'Manhã' },
+  },
+];
+
 export const documentosDemo: DocumentoApi[] = [
   {
     id: 'doc-contrato',
@@ -281,6 +308,8 @@ export function respostaDemo(caminho: string): unknown | undefined {
   if (caminho.startsWith('/api/agenda')) return agendaDemo;
   if (caminho.startsWith('/api/contatos/linha-do-tempo')) return { eventos: [] };
   if (caminho.startsWith('/api/automacoes-fluxos')) return automacoesDemo;
+  if (caminho.startsWith('/api/formularios/respostas')) return respostasDeFormularioDemo;
+  if (caminho.startsWith('/api/formularios/')) return { ...formulariosDemo[0], paginas: paginasDemo };
   if (caminho.startsWith('/api/formularios')) return formulariosDemo;
   if (caminho.startsWith('/api/documentos')) return documentosDemo;
   if (caminho.startsWith('/api/canais')) return canaisDemo;

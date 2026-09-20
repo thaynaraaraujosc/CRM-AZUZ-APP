@@ -246,3 +246,35 @@ export type EstadoDaIntegracao = {
   erroMensagem?: string | null;
   atualizadoEm?: string | null;
 };
+
+/** Pergunta de um formulário, como o CRM guarda. */
+export type PerguntaDeFormulario = {
+  id: string;
+  tipo: string;
+  rotulo: string;
+  descricao?: string;
+  obrigatoria?: boolean;
+  oculta?: boolean;
+  opcoes?: string[];
+};
+
+export type PaginaDeFormulario = {
+  id: string;
+  titulo: string;
+  descricao?: string;
+  perguntas: PerguntaDeFormulario[];
+};
+
+/** `/api/formularios/[id]` — o formulário inteiro, com as páginas e perguntas. */
+export type FormularioCompleto = FormularioApi & {
+  paginas?: PaginaDeFormulario[];
+};
+
+/** `/api/formularios/respostas` — todas as respostas do workspace; a tela filtra pelo formulário. */
+export type RespostaDeFormulario = {
+  id: string;
+  formularioId: string;
+  criadoEm: string;
+  /** A chave é o id da pergunta, não o rótulo. */
+  valores: Record<string, string>;
+};

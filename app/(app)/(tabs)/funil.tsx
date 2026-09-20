@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -11,6 +11,7 @@ import Animated, {
   useAnimatedStyle,
   useFrameCallback,
   useSharedValue,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -62,6 +63,89 @@ function paraTela(colunas: ColunaFunil[]): EtapaNaTela[] {
     cards: coluna.cards.map(negocioNaTela),
   }));
 }
+
+
+/**
+ * O que cada gesto de card precisa saber. Vem do quadro pronto e com identidade estável, senão o
+ * card seria remontado a cada toque.
+ */
+type Arraste = {
+  dedoX: SharedValue<number>;
+  dedoY: SharedValue<number>;
+  arrastando: SharedValue<number>;
+  alvo: SharedValue<number>;
+  rolagem: SharedValue<number>;
+  quadroX: SharedValue<number>;
+  totalEtapas: SharedValue<number>;
+  comecar: (negocio: NegocioNaTela, etapaOrigem: string) => void;
+  mudarAlvo: (indice: number) => void;
+  soltar: () => void;
+  cancelar: () => void;
+  abrir: (id: string) => void;
+};
+
+/**
+ * Card que se levanta ao ser segurado.
+ *
+ * Mora aqui fora, e não dentro da tela do funil, por um motivo que custou caro: um componente
+ * declarado dentro de outro é um tipo novo a cada desenho da tela. O React então desmonta e monta
+ * o card de novo — e o gesto em curso morre junto, no meio do arraste. Era isso que travava o
+ * quadro.
+ */
+const CardArrastavel = memo(function CardArrastavel({
+  negocio,
+  etapaId,
+  fantasma,
+  arraste,
+}: {
+  negocio: NegocioNaTela;
+  etapaId: string;
+  fantasma: boolean;
+  arraste: Arraste;
+}) {
+  const arrastar = Gesture.Pan()
+    .activateAfterLongPress(220)
+    .onStart((e) => {
+      arraste.dedoX.value = e.absoluteX;
+      arraste.dedoY.value = e.absoluteY;
+      arraste.arrastando.value = 1;
+      runOnJS(arraste.comecar)(negocio, etapaId);
+    })
+    .onUpdate((e) => {
+      arraste.dedoX.value = e.absoluteX;
+      arraste.dedoY.value = e.absoluteY;
+
+      const xNoConteudo = e.absoluteX - arraste.quadroX.value + arraste.rolagem.value - MARGEM_QUADRO;
+      const bruto = Math.floor(xNoConteudo / (LARGURA_COLUNA + FOLGA_COLUNA));
+      const indice = Math.min(Math.max(bruto, 0), arraste.totalEtapas.value - 1);
+      if (indice !== arraste.alvo.value) {
+        arraste.alvo.value = indice;
+        runOnJS(arraste.mudarAlvo)(indice);
+      }
+    })
+    .onEnd(() => {
+      arraste.arrastando.value = 0;
+      runOnJS(arraste.soltar)();
+    })
+    // Gesto cancelado (dedo saiu da tela, sistema tomou o toque) também precisa devolver o quadro
+    // ao normal — senão ele fica sem rolar e sem aceitar outro arraste.
+    .onFinalize((_e, sucesso) => {
+      arraste.arrastando.value = 0;
+      if (!sucesso) runOnJS(arraste.cancelar)();
+    });
+
+  const abrir = Gesture.Tap().onEnd(() => {
+    runOnJS(arraste.abrir)(negocio.id);
+  });
+
+  return (
+    <GestureDetector gesture={Gesture.Exclusive(arrastar, abrir)}>
+      <View>
+        <CardNegocio negocio={negocio} fantasma={fantasma} />
+      </View>
+    </GestureDetector>
+  );
+});
 
 /**
  * Kanban de negócios, nas cores do CRM web: coluna cinza sem moldura, card branco com borda fina
@@ -151,13 +235,35 @@ export default function FunilScreen() {
     }
   }, false);
 
+  // O que está no ar agora. Vive também numa `ref` porque quem solta o card precisa saber disso
+  // na hora, e o estado só chega no próximo desenho da tela.
+  const noArRef = useRef<EmArraste>(null);
+
   const comecarArraste = useCallback(
     (negocio: NegocioNaTela, etapaOrigem: string) => {
+      noArRef.current = { negocio, etapaOrigem };
       setEmArraste({ negocio, etapaOrigem });
       rolagemAutomatica.setActive(true);
     },
     [rolagemAutomatica],
   );
+
+  /**
+   * Fim do gesto, dê no que der.
+   *
+   * O quadro para de rolar enquanto um card está no ar (`scrollEnabled={!emArraste}`). Se o gesto
+   * fosse cancelado — o dedo saindo da tela, o sistema tomando o toque — nada desfazia esse
+   * estado, e o funil ficava travado: não rolava mais e não deixava arrastar de novo. Agora todo
+   * fim de gesto passa por aqui.
+   */
+  const encerrarArraste = useCallback(() => {
+    noArRef.current = null;
+    rolagemAutomatica.setActive(false);
+    arrastando.value = 0;
+    alvo.value = -1;
+    setEtapaAlvo(-1);
+    setEmArraste(null);
+  }, [alvo, arrastando, rolagemAutomatica]);
 
   /**
    * Solta o card na etapa sob o dedo: move na tela primeiro e grava em seguida.
@@ -166,35 +272,63 @@ export default function FunilScreen() {
    * aqui seria a tela mostrar o card na etapa nova e o CRM continuar com ele na antiga.
    */
   const soltar = useCallback(() => {
-    rolagemAutomatica.setActive(false);
-    const destino = alvo.value;
-    setEtapaAlvo(-1);
+    const atual = noArRef.current;
+    const etapaDestino = etapas[alvo.value];
+    encerrarArraste();
 
-    setEmArraste((atual) => {
-      if (!atual) return null;
-      const etapaDestino = etapas[destino];
-      if (etapaDestino && etapaDestino.id !== atual.etapaOrigem) {
-        setEtapas((anteriores) =>
-          anteriores.map((etapa) => {
-            if (etapa.id === atual.etapaOrigem) {
-              return { ...etapa, cards: etapa.cards.filter((card) => card.id !== atual.negocio.id) };
-            }
-            if (etapa.id === etapaDestino.id) {
-              return { ...etapa, cards: [...etapa.cards, atual.negocio] };
-            }
-            return etapa;
-          }),
-        );
+    if (!atual || !etapaDestino || etapaDestino.id === atual.etapaOrigem) return;
 
-        setFalhaAoMover(null);
-        moverNegocio(atual.negocio.id, etapaDestino.id).catch((e: unknown) => {
-          setFalhaAoMover(e instanceof Error ? e.message : 'Não foi possível mover o negócio.');
-          recarregar();
-        });
-      }
-      return null;
+    setEtapas((anteriores) =>
+      anteriores.map((etapa) => {
+        if (etapa.id === atual.etapaOrigem) {
+          return { ...etapa, cards: etapa.cards.filter((card) => card.id !== atual.negocio.id) };
+        }
+        if (etapa.id === etapaDestino.id) {
+          return { ...etapa, cards: [...etapa.cards, atual.negocio] };
+        }
+        return etapa;
+      }),
+    );
+
+    setFalhaAoMover(null);
+    moverNegocio(atual.negocio.id, etapaDestino.id).catch((e: unknown) => {
+      setFalhaAoMover(e instanceof Error ? e.message : 'Não foi possível mover o negócio.');
+      recarregar();
     });
-  }, [alvo, etapas, recarregar, rolagemAutomatica]);
+  }, [alvo, encerrarArraste, etapas, recarregar]);
+
+  const abrirNegocio = useCallback((negocioId: string) => router.push(`/negocio/${negocioId}`), [router]);
+
+  // Identidade estável: se esse objeto mudasse a cada desenho, todo card mudaria junto.
+  const arraste = useMemo<Arraste>(
+    () => ({
+      dedoX,
+      dedoY,
+      arrastando,
+      alvo,
+      rolagem,
+      quadroX,
+      totalEtapas,
+      comecar: comecarArraste,
+      mudarAlvo: setEtapaAlvo,
+      soltar,
+      cancelar: encerrarArraste,
+      abrir: abrirNegocio,
+    }),
+    [
+      abrirNegocio,
+      alvo,
+      arrastando,
+      comecarArraste,
+      dedoX,
+      dedoY,
+      encerrarArraste,
+      quadroX,
+      rolagem,
+      soltar,
+      totalEtapas,
+    ],
+  );
 
   function abrirNovoNegocio(etapaId?: string) {
     setEtapaEscolhida(etapaId ?? etapas[0]?.id ?? null);
@@ -268,48 +402,6 @@ export default function FunilScreen() {
     opacity: arrastando.value,
     transform: [{ scale: 1.04 }, { rotate: '-1.5deg' }],
   }));
-
-  function CardArrastavel({ negocio, etapaId }: { negocio: NegocioNaTela; etapaId: string }) {
-    const arrastar = Gesture.Pan()
-      .activateAfterLongPress(220)
-      .onStart((e) => {
-        dedoX.value = e.absoluteX;
-        dedoY.value = e.absoluteY;
-        arrastando.value = 1;
-        runOnJS(comecarArraste)(negocio, etapaId);
-      })
-      .onUpdate((e) => {
-        dedoX.value = e.absoluteX;
-        dedoY.value = e.absoluteY;
-
-        const xNoConteudo = e.absoluteX - quadroX.value + rolagem.value - MARGEM_QUADRO;
-        const bruto = Math.floor(xNoConteudo / (LARGURA_COLUNA + FOLGA_COLUNA));
-        const indice = Math.min(Math.max(bruto, 0), totalEtapas.value - 1);
-        if (indice !== alvo.value) {
-          alvo.value = indice;
-          runOnJS(setEtapaAlvo)(indice);
-        }
-      })
-      .onEnd(() => {
-        arrastando.value = 0;
-        runOnJS(soltar)();
-      })
-      .onFinalize(() => {
-        arrastando.value = 0;
-      });
-
-    const abrir = Gesture.Tap().onEnd(() => {
-      runOnJS(router.push)(`/negocio/${negocio.id}`);
-    });
-
-    return (
-      <GestureDetector gesture={Gesture.Exclusive(arrastar, abrir)}>
-        <View>
-          <CardNegocio negocio={negocio} fantasma={emArraste?.negocio.id === negocio.id} />
-        </View>
-      </GestureDetector>
-    );
-  }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
@@ -407,7 +499,13 @@ export default function FunilScreen() {
                   contentContainerStyle={{ gap: space[2], paddingBottom: space[2] }}
                 >
                   {etapa.cards.map((negocio) => (
-                    <CardArrastavel key={negocio.id} negocio={negocio} etapaId={etapa.id} />
+                    <CardArrastavel
+                      key={negocio.id}
+                      negocio={negocio}
+                      etapaId={etapa.id}
+                      fantasma={emArraste?.negocio.id === negocio.id}
+                      arraste={arraste}
+                    />
                   ))}
 
                   {etapa.cards.length === 0 ? (

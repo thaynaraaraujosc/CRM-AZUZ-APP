@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,6 +27,7 @@ export default function FormulariosScreen() {
 
 function Formularios() {
   const c = useCores();
+  const router = useRouter();
   const aoPerderSessao = useAoPerderSessao();
   const { dados, carregando, erro, recarregar } = useFormularios(aoPerderSessao);
 
@@ -70,7 +72,7 @@ function Formularios() {
             {formularios.map((f) => {
               const publicado = f.status?.toLowerCase() === 'publicado';
               return (
-                <Cartao key={f.id} style={{ gap: space[3] }}>
+                <Cartao key={f.id} onPress={() => router.push(`/formulario/${f.id}`)} style={{ gap: space[3] }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
                     <View
                       style={{
@@ -99,15 +101,21 @@ function Formularios() {
                     />
                   </View>
 
-                  <Secundario>Atualizado em {dataCurta(f.atualizadoEm)}</Secundario>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+                    <Secundario style={{ flex: 1 }}>Atualizado em {dataCurta(f.atualizadoEm)}</Secundario>
+                    <Text style={{ color: c.blue, fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>
+                      Ver respostas
+                    </Text>
+                    <Ionicons name="chevron-forward" size={14} color={c.blue} />
+                  </View>
                 </Cartao>
               );
             })}
           </View>
 
           <Secundario>
-            Criar e editar formulário exige montar perguntas e páginas, o que é feito no CRM pelo
-            computador.
+            Toque num formulário para ver o que as pessoas responderam. Criar e editar as perguntas
+            é feito no CRM pelo computador.
           </Secundario>
         </ScrollView>
       )}

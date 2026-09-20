@@ -4,18 +4,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { gravarPreferencia, lerPreferencia, useAgenda, useConversas, useTarefas } from '@/api/recursos';
+import { gravarPreferencia, lerPreferencia, useAgenda, useConversas } from '@/api/recursos';
 import { useAoPerderSessao } from '@/api/sessao';
 import { Cartao, Divisor, ListaVazia, Secundario, TituloSecao } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
-type Tipo = 'conversa' | 'tarefa' | 'compromisso';
+type Tipo = 'conversa' | 'compromisso';
 type Aviso = { id: string; tipo: Tipo; titulo: string; detalhe: string; quando: string; rota?: string };
 
 const ICONE = {
   conversa: 'chatbubble-ellipses-outline',
-  tarefa: 'checkbox-outline',
   compromisso: 'calendar-outline',
 } as const;
 
@@ -29,9 +28,9 @@ function hojeIso() {
 /**
  * Aberta como folha por cima da tela atual — notificação é interrupção, não destino.
  *
- * O CRM não tem uma tabela de notificações: o que existe são conversas sem resposta, tarefas
- * atrasadas e compromissos de hoje. Esta tela junta essas três coisas, que é exatamente o que a
- * pessoa precisa ver ao abrir o app.
+ * O CRM não tem uma tabela de notificações: o que existe são conversas sem resposta e
+ * compromissos de hoje. Esta tela junta as duas coisas, que é o que a pessoa precisa ver ao abrir
+ * o app.
  */
 export default function NotificacoesScreen() {
   const c = useCores();
@@ -39,7 +38,6 @@ export default function NotificacoesScreen() {
   const aoPerderSessao = useAoPerderSessao();
 
   const { dados: conversas } = useConversas(aoPerderSessao);
-  const { dados: colunas } = useTarefas(aoPerderSessao);
   const { dados: agenda } = useAgenda(aoPerderSessao);
 
   const [lidos, setLidos] = useState<string[]>([]);
@@ -73,20 +71,6 @@ export default function NotificacoesScreen() {
       });
     }
 
-    for (const coluna of colunas ?? []) {
-      for (const tarefa of coluna.cards) {
-        if (tarefa.concluida || !tarefa.atrasada) continue;
-        lista.push({
-          id: `tarefa:${tarefa.id}`,
-          tipo: 'tarefa',
-          titulo: `Tarefa atrasada: ${tarefa.titulo}`,
-          detalhe: [tarefa.contato, tarefa.responsavel?.nome].filter(Boolean).join(' · ') || 'Sem contato',
-          quando: tarefa.data,
-          rota: '/tarefas',
-        });
-      }
-    }
-
     const hoje = hojeIso();
     for (const compromisso of agenda ?? []) {
       if (compromisso.dataIso !== hoje) continue;
@@ -102,7 +86,7 @@ export default function NotificacoesScreen() {
     }
 
     return lista;
-  }, [conversas, colunas, agenda]);
+  }, [conversas, agenda]);
 
   const novos = avisos.filter((a) => !lidos.includes(a.id));
   const vistos = avisos.filter((a) => lidos.includes(a.id));
@@ -118,7 +102,7 @@ export default function NotificacoesScreen() {
   }
 
   function Linha({ a, lido }: { a: Aviso; lido: boolean }) {
-    const cor = a.tipo === 'compromisso' ? c.success : a.tipo === 'tarefa' ? c.warning : c.blue;
+    const cor = a.tipo === 'compromisso' ? c.success : c.blue;
     return (
       <Pressable
         onPress={a.rota ? () => router.push(a.rota as never) : undefined}
@@ -184,7 +168,7 @@ export default function NotificacoesScreen() {
           <ListaVazia
             icone="notifications-off-outline"
             titulo="Nada pendente"
-            descricao="Nenhuma conversa sem resposta, tarefa atrasada ou compromisso hoje."
+            descricao="Nenhuma conversa sem resposta e nenhum compromisso hoje."
           />
         ) : null}
 

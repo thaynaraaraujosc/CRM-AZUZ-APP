@@ -17,23 +17,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { conversaNaTela } from '@/api/adaptar';
 import { usePermissoes } from '@/api/permissoes';
-import {
-  criarNegocio,
-  criarTarefa,
-  enviarMensagem,
-  mudarConversa,
-  perguntarParaIa,
-  useConversas,
-  useFunis,
-  useHistoricoDeMensagens,
-} from '@/api/recursos';
-import { useAoPerderSessao, useSessao } from '@/api/sessao';
+import { criarNegocio, enviarMensagem, mudarConversa, useConversas, useFunis, useHistoricoDeMensagens } from '@/api/recursos';
+import { useAoPerderSessao } from '@/api/sessao';
 import type { Mensagem } from '@/api/tipos';
 import { Carregando, FalhaAoCarregar } from '@/components/estados';
-import { FolhaDeCriacao } from '@/components/FolhaDeCriacao';
 import { TagOrigem } from '@/components/funil';
 import { TelaSemPermissao } from '@/components/TelaSemPermissao';
-import { Avatar, Aviso, Campo, Chip, Divisor, LinhaMenu, ListaVazia, Secundario, Selo } from '@/components/ui';
+import { Avatar, Aviso, Chip, Divisor, LinhaMenu, ListaVazia, Selo } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
@@ -53,7 +43,6 @@ function Conversa() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const aoPerderSessao = useAoPerderSessao();
 
-  const { usuario } = useSessao();
   const listaRef = useRef<ScrollView>(null);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -69,12 +58,6 @@ function Conversa() {
   const [menuAberto, setMenuAberto] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
-  const [resumo, setResumo] = useState<string | null>(null);
-  const [criandoTarefa, setCriandoTarefa] = useState(false);
-  const [tituloTarefa, setTituloTarefa] = useState('');
-  const [prazoTarefa, setPrazoTarefa] = useState('Hoje, 17:00');
-  const [salvandoTarefa, setSalvandoTarefa] = useState(false);
-  const [falhaNaTarefa, setFalhaNaTarefa] = useState<string | null>(null);
 
   const linha = (conversas.dados ?? []).find((cv) => cv.id === id);
   const conversa = linha ? conversaNaTela(linha) : null;
@@ -192,53 +175,6 @@ function Conversa() {
       setAviso(e instanceof Error ? e.message : 'Não deu para criar o negócio.');
     } finally {
       setOcupado(null);
-    }
-  }
-
-  async function resumirComIa() {
-    if (!conversa) return;
-    setMenuAberto(false);
-    setOcupado('ia');
-    setAviso(null);
-    try {
-      const { resposta } = await perguntarParaIa(
-        `Resuma a conversa com ${conversa.nome} em poucas linhas: o que a pessoa quer, em que pé está e qual o próximo passo.`,
-        [],
-      );
-      setResumo(resposta);
-    } catch (e) {
-      setAviso(e instanceof Error ? e.message : 'A IA não respondeu agora.');
-    } finally {
-      setOcupado(null);
-    }
-  }
-
-  async function salvarTarefa() {
-    if (!conversa) return;
-    if (!tituloTarefa.trim()) {
-      setFalhaNaTarefa('Escreva o que precisa ser feito.');
-      return;
-    }
-
-    setSalvandoTarefa(true);
-    setFalhaNaTarefa(null);
-    try {
-      await criarTarefa({
-        titulo: tituloTarefa.trim(),
-        contato: conversa.nome,
-        data: prazoTarefa.trim() || 'Hoje',
-        responsavel: {
-          nome: usuario?.name ?? 'Eu',
-          initials: usuario?.initials ?? (usuario?.name ?? 'EU').slice(0, 2).toUpperCase(),
-        },
-      });
-      setCriandoTarefa(false);
-      setTituloTarefa('');
-      setAviso('Tarefa criada.');
-    } catch (e) {
-      setFalhaNaTarefa(e instanceof Error ? e.message : 'Não deu para criar a tarefa.');
-    } finally {
-      setSalvandoTarefa(false);
     }
   }
 
@@ -412,21 +348,8 @@ function Conversa() {
             desabilitado={ocupado !== null}
           />
           <Chip
-            texto="Criar tarefa"
-            onPress={() => {
-              setTituloTarefa(conversa ? `Retornar para ${conversa.nome}` : '');
-              setFalhaNaTarefa(null);
-              setCriandoTarefa(true);
-            }}
-          />
-          <Chip
             texto={ocupado === 'Finalizado' ? 'Finalizando…' : 'Finalizar conversa'}
             onPress={() => mudarStatus('Finalizado')}
-            desabilitado={ocupado !== null}
-          />
-          <Chip
-            texto={ocupado === 'ia' ? 'A IA está lendo…' : 'Resumir com IA'}
-            onPress={resumirComIa}
             desabilitado={ocupado !== null}
           />
         </ScrollView>
@@ -547,46 +470,6 @@ function Conversa() {
         </Pressable>
       </Modal>
 
-      {/* Resumo da IA. Fica numa folha porque é texto para ler, não para editar. */}
-      <Modal visible={resumo !== null} transparent animationType="slide" onRequestClose={() => setResumo(null)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(11, 21, 51, 0.35)', justifyContent: 'flex-end' }}>
-          <Pressable style={{ flex: 1 }} onPress={() => setResumo(null)} />
-          <SafeAreaView
-            edges={['bottom']}
-            style={{ backgroundColor: c.surface, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl }}
-          >
-            <View style={{ padding: space[4], gap: space[3] }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-                <Ionicons name="sparkles" size={16} color={c.ia} />
-                <Text style={{ flex: 1, color: c.ink, fontSize: fontSize.md, fontWeight: fontWeight.bold }}>
-                  Resumo da conversa
-                </Text>
-                <Pressable onPress={() => setResumo(null)} hitSlop={10}>
-                  <Ionicons name="close" size={20} color={c.textMuted} />
-                </Pressable>
-              </View>
-              <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-                <Text style={{ color: c.ink, fontSize: fontSize.base, lineHeight: 22 }}>{resumo}</Text>
-              </ScrollView>
-              <Secundario>Feito pela Azuz IA com os dados do seu workspace. Pode conter erro.</Secundario>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
-
-      <FolhaDeCriacao
-        aberta={criandoTarefa}
-        titulo="Nova tarefa"
-        descricao={conversa ? `Fica ligada a ${conversa.nome}.` : undefined}
-        salvando={salvandoTarefa}
-        erro={falhaNaTarefa}
-        aoFechar={() => setCriandoTarefa(false)}
-        aoSalvar={salvarTarefa}
-        rotuloSalvar="Criar tarefa"
-      >
-        <Campo rotulo="O que fazer" placeholder="Retornar ligação" valor={tituloTarefa} aoMudar={setTituloTarefa} />
-        <Campo rotulo="Prazo" placeholder="Hoje, 17:00" valor={prazoTarefa} aoMudar={setPrazoTarefa} />
-      </FolhaDeCriacao>
     </SafeAreaView>
   );
 }
