@@ -37,6 +37,8 @@ function Automacoes() {
   const [filtro, setFiltro] = useState<Filtro>('todos');
   /** Estado otimista do interruptor, para o toque responder antes do servidor. */
   const [mudando, setMudando] = useState<Record<string, boolean>>({});
+  /** Quais interruptores estão esperando o servidor agora. */
+  const [gravando, setGravando] = useState<string[]>([]);
   const [falha, setFalha] = useState<string | null>(null);
 
   const fluxos = (dados ?? []).filter((f) => !f.arquivada);
@@ -46,6 +48,7 @@ function Automacoes() {
   async function alternar(id: string, ativa: boolean) {
     const novo = !estaAtiva(id, ativa);
     setMudando((antes) => ({ ...antes, [id]: novo }));
+    setGravando((antes) => [...antes, id]);
     setFalha(null);
     try {
       await alternarAutomacao(id, novo);
@@ -57,6 +60,8 @@ function Automacoes() {
         return copia;
       });
       setFalha(e instanceof Error ? e.message : 'Não foi possível mudar a automação.');
+    } finally {
+      setGravando((antes) => antes.filter((outro) => outro !== id));
     }
   }
 
@@ -165,13 +170,11 @@ function Automacoes() {
                     </View>
 
                     {rascunho ? null : (
-                      <Cartao
-                        onPress={() => alternar(f.id, f.ativa)}
-                        padding={0}
-                        style={{ borderWidth: 0, backgroundColor: 'transparent' }}
-                      >
-                        <Interruptor ligado={ligada} />
-                      </Cartao>
+                      <Interruptor
+                        ligado={ligada}
+                        ocupado={gravando.includes(f.id)}
+                        aoMudar={() => alternar(f.id, f.ativa)}
+                      />
                     )}
                   </View>
 

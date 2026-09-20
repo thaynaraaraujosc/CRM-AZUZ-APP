@@ -1,17 +1,45 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
+import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { pedirLinkDeNovaSenha } from '@/api/recursos';
 import { Marca } from '@/components/Marca';
-import { Botao, Campo, Cartao } from '@/components/ui';
+import { Aviso, Botao, Campo, Cartao } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /** Recuperação de senha por e-mail. */
 export default function EsqueciSenhaScreen() {
   const c = useCores();
-  const router = useRouter();
+
+  const [email, setEmail] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [aviso, setAviso] = useState<{ tom: 'sucesso' | 'erro'; texto: string } | null>(null);
+
+  async function enviar() {
+    if (!email.trim()) {
+      setAviso({ tom: 'erro', texto: 'Escreva o e-mail da sua conta.' });
+      return;
+    }
+
+    setEnviando(true);
+    setAviso(null);
+    try {
+      const resposta = await pedirLinkDeNovaSenha(email.trim());
+      setAviso({
+        tom: 'sucesso',
+        texto:
+          resposta?.mensagem ??
+          'Se esse e-mail tiver conta no CRM AZUZ, o link de nova senha já está a caminho.',
+      });
+    } catch (e) {
+      setAviso({ tom: 'erro', texto: e instanceof Error ? e.message : 'Não deu para enviar agora.' });
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.canvas }}>
@@ -47,9 +75,20 @@ export default function EsqueciSenhaScreen() {
               </Text>
             </View>
 
-            <Campo rotulo="E-mail" placeholder="voce@empresa.com.br" icone="mail-outline" teclado="email-address" />
+            <Campo
+              rotulo="E-mail"
+              placeholder="voce@empresa.com.br"
+              icone="mail-outline"
+              teclado="email-address"
+              valor={email}
+              aoMudar={setEmail}
+              aoEnviar={enviar}
+              autoCompletar="email"
+            />
 
-            <Botao titulo="Enviar link" bloco onPress={() => router.back()} />
+            {aviso ? <Aviso tom={aviso.tom} texto={aviso.texto} /> : null}
+
+            <Botao titulo={enviando ? 'Enviando…' : 'Enviar link'} bloco onPress={enviar} />
 
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
               <Text style={{ color: c.textMuted, fontSize: fontSize.sm }}>Lembrou a senha?</Text>

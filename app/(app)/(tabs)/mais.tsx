@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useRouter, type Href } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { usePermissoes, type Modulo } from '@/api/permissoes';
-import { useSessao } from '@/api/sessao';
+import { useAgenda, useAutomacoes, useContatos, useEquipe, useRelatorios } from '@/api/recursos';
+import { useAoPerderSessao, useSessao } from '@/api/sessao';
 import { Avatar, Cabecalho, Cartao, Divisor, LinhaMenu, TituloSecao } from '@/components/ui';
 import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
@@ -13,28 +15,11 @@ import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 type Icone = ComponentProps<typeof Ionicons>['name'];
 type Item = { icone: Icone; titulo: string; sub: string; rota: Href; modulo?: Modulo };
 
-const RELACIONAMENTO: Item[] = [
-  { icone: 'people-outline', titulo: 'Contatos', sub: '248 no workspace', rota: '/contatos', modulo: 'contatos' },
-  { icone: 'calendar-outline', titulo: 'Agenda', sub: '3 compromissos hoje', rota: '/agenda' },
-  { icone: 'person-circle-outline', titulo: 'Equipe', sub: '4 pessoas · 2 online', rota: '/equipe' },
-];
-
-const OPERACAO: Item[] = [
-  { icone: 'flash-outline', titulo: 'Automações', sub: '3 ativas', rota: '/automacoes', modulo: 'automacoes' },
-  { icone: 'document-text-outline', titulo: 'Formulários', sub: '322 respostas', rota: '/formularios', modulo: 'formularios' },
-  { icone: 'folder-outline', titulo: 'Documentos', sub: '4 arquivos', rota: '/documentos' },
-  { icone: 'sparkles-outline', titulo: 'Azuz IA', sub: 'Resumo, resposta e análise', rota: '/azuz-ia' },
-];
-
-const ANALISE: Item[] = [
-  { icone: 'trending-up-outline', titulo: 'Inteligência comercial', sub: 'Tráfego, performance e jornada', rota: '/inteligencia', modulo: 'relatorios' },
-  { icone: 'bar-chart-outline', titulo: 'Relatórios', sub: '3 relatórios gerados', rota: '/inteligencia/relatorios', modulo: 'relatorios' },
-];
-
-const CONTA: Item[] = [
-  { icone: 'settings-outline', titulo: 'Configurações', sub: 'Workspace, canais e segurança', rota: '/configuracoes', modulo: 'configuracoes' },
-  { icone: 'notifications-outline', titulo: 'Notificações', sub: '2 não lidas', rota: '/notificacoes' },
-];
+function contar(quantos: number | undefined, um: string, varios: string, vazio: string): string {
+  if (quantos === undefined) return '…';
+  if (quantos === 0) return vazio;
+  return quantos === 1 ? `1 ${um}` : `${quantos} ${varios}`;
+}
 
 /** Tudo que não coube na barra inferior. Agrupado por intenção, não por ordem alfabética. */
 export default function MaisScreen() {
@@ -42,6 +27,90 @@ export default function MaisScreen() {
   const router = useRouter();
   const { usuario, sair } = useSessao();
   const { pode } = usePermissoes();
+  const aoPerderSessao = useAoPerderSessao();
+
+  // Os subtítulos do menu são contagens de verdade: número inventado aqui vira desconfiança no
+  // resto do aplicativo.
+  const contatos = useContatos(aoPerderSessao);
+  const equipe = useEquipe(aoPerderSessao);
+  const agenda = useAgenda(aoPerderSessao);
+  const automacoes = useAutomacoes(pode('automacoes') ? aoPerderSessao : undefined);
+  const relatorios = useRelatorios(pode('relatorios') ? aoPerderSessao : undefined);
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  const compromissosDeHoje = (agenda.dados ?? []).filter((a) => a.dataIso === hoje).length;
+  const automacoesAtivas = (automacoes.dados ?? []).filter((f) => f.ativa && f.status === 'publicado').length;
+
+  const RELACIONAMENTO: Item[] = [
+    {
+      icone: 'people-outline',
+      titulo: 'Contatos',
+      sub: contar(contatos.dados?.length, 'pessoa', 'pessoas', 'nenhum contato ainda'),
+      rota: '/contatos',
+      modulo: 'contatos',
+    },
+    {
+      icone: 'calendar-outline',
+      titulo: 'Agenda',
+      sub: agenda.dados
+        ? contar(compromissosDeHoje, 'compromisso hoje', 'compromissos hoje', 'nada marcado para hoje')
+        : '…',
+      rota: '/agenda',
+    },
+    {
+      icone: 'person-circle-outline',
+      titulo: 'Equipe',
+      sub: contar(equipe.dados?.length, 'pessoa', 'pessoas', 'só você'),
+      rota: '/equipe',
+    },
+  ];
+
+  const OPERACAO: Item[] = [
+    {
+      icone: 'flash-outline',
+      titulo: 'Automações',
+      sub: automacoes.dados ? contar(automacoesAtivas, 'ativa', 'ativas', 'nenhuma ativa') : '…',
+      rota: '/automacoes',
+      modulo: 'automacoes',
+    },
+    {
+      icone: 'document-text-outline',
+      titulo: 'Formulários',
+      sub: 'Os formulários do workspace',
+      rota: '/formularios',
+      modulo: 'formularios',
+    },
+    { icone: 'folder-outline', titulo: 'Documentos', sub: 'Contratos, propostas e modelos', rota: '/documentos' },
+    { icone: 'sparkles-outline', titulo: 'Azuz IA', sub: 'Pergunte sobre os seus dados', rota: '/azuz-ia' },
+  ];
+
+  const ANALISE: Item[] = [
+    {
+      icone: 'trending-up-outline',
+      titulo: 'Inteligência comercial',
+      sub: 'Tráfego, performance e jornada',
+      rota: '/inteligencia',
+      modulo: 'relatorios',
+    },
+    {
+      icone: 'bar-chart-outline',
+      titulo: 'Relatórios',
+      sub: relatorios.dados ? contar(relatorios.dados.length, 'gerado', 'gerados', 'nenhum gerado ainda') : '…',
+      rota: '/inteligencia/relatorios',
+      modulo: 'relatorios',
+    },
+  ];
+
+  const CONTA: Item[] = [
+    {
+      icone: 'settings-outline',
+      titulo: 'Configurações',
+      sub: 'Workspace, canais e segurança',
+      rota: '/configuracoes',
+      modulo: 'configuracoes',
+    },
+    { icone: 'notifications-outline', titulo: 'Notificações', sub: 'Conversas, tarefas e agenda', rota: '/notificacoes' },
+  ];
 
   const nome = usuario?.name ?? 'Sua conta';
   const iniciais = usuario?.initials ?? (usuario?.name ?? '?').slice(0, 2).toUpperCase();
@@ -134,7 +203,9 @@ export default function MaisScreen() {
           </Pressable>
         </View>
 
-        <Text style={{ color: c.textFaint, fontSize: fontSize.xs, textAlign: 'center' }}>AZUZ CRM · versão 1.0.0</Text>
+        <Text style={{ color: c.textFaint, fontSize: fontSize.xs, textAlign: 'center' }}>
+          {`AZUZ CRM · versão ${Constants.expoConfig?.version ?? '1.0.0'}`}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
