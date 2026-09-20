@@ -31,7 +31,9 @@ Abra no Expo Go (QR Code no terminal), ou `npm run ios` / `npm run android` / `n
 
 ## Telas
 
-**Entrada** — login, cadastro, recuperação de senha.
+**Entrada** — login e recuperação de senha. **Não existe cadastro no app**: conta nova e
+assinatura acontecem só no site. Um app de loja que abre caminho para vender assinatura digital cai
+na regra de compra da Apple, que exigiria pagar pelo sistema dela. O app atende quem já é cliente.
 
 **Barra inferior** — Conversas, Funil, Tarefas, Mais.
 O menu lateral do web tem vinte itens; num telefone isso não cabe, então os três módulos de uso
@@ -43,7 +45,8 @@ automações, formulários, documentos, Azuz IA, notificações, perfil.
 **Inteligência comercial** — painel com tráfego, atividades, performance de vendas, jornada do
 cliente, motivos de perda e relatórios.
 
-**Configurações** — aparência, notificações, canais e integrações, segurança, plano e cobrança.
+**Configurações** — aparência, notificações, canais e integrações, segurança. Plano e cobrança
+ficam no site.
 
 ## Estrutura
 

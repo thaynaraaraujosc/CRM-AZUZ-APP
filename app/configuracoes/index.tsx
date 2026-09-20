@@ -16,7 +16,7 @@ export default function ConfiguracoesScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.canvas }}>
-      <Cabecalho titulo="Configurações" sub="Empresa Demo · plano Profissional" voltar />
+      <Cabecalho titulo="Configurações" sub="Workspace, canais e segurança" voltar />
 
       <ScrollView
         contentContainerStyle={{ padding: space[4], paddingBottom: space[7], gap: space[5] }}
@@ -97,9 +97,9 @@ export default function ConfiguracoesScreen() {
             <Divisor />
             <LinhaMenu
               icone="card-outline"
-              titulo="Plano e cobrança"
-              sub="Profissional · renova em 02/10"
-              onPress={() => router.push('/configuracoes/plano')}
+              titulo="Assinatura"
+              sub="Plano e pagamento são geridos no site"
+              direita={<Selo texto="No site" />}
             />
           </Cartao>
         </View>

@@ -11,7 +11,11 @@ import { useCores } from '@/theme/ThemeContext';
 import { fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
- * Entrada no CRM — agora contra a API de verdade (`/api/auth`, a mesma do painel web).
+ * Entrada no CRM, contra a API de verdade (`/api/auth`, a mesma do painel web).
+ *
+ * Não existe cadastro aqui, de propósito. Conta nova e assinatura acontecem só no site: app de
+ * loja que abre caminho para vender assinatura digital cai na regra de compra da Apple, que
+ * exigiria pagamento pelo sistema dela. O app atende quem já é cliente.
  *
  * Quem já tem sessão válida no aparelho não vê esta tela: o provedor confere ao abrir o app e
  * este efeito manda direto para dentro.
@@ -132,14 +136,9 @@ export default function LoginScreen() {
               <Botao titulo="Entrar" bloco onPress={enviar} />
             )}
 
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
-              <Text style={{ color: c.textMuted, fontSize: fontSize.sm }}>Não possui conta?</Text>
-              <Link href="/cadastro" asChild>
-                <Pressable hitSlop={6}>
-                  <Text style={{ color: c.blue, fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>Criar conta</Text>
-                </Pressable>
-              </Link>
-            </View>
+            <Text style={{ color: c.textFaint, fontSize: fontSize.sm, textAlign: 'center' }}>
+              O aplicativo é para quem já tem conta no AZUZ CRM.
+            </Text>
           </Cartao>
 
           <Text style={{ color: c.textFaint, fontSize: fontSize.xs, textAlign: 'center' }}>

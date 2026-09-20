@@ -31,7 +31,7 @@ const ANALISE: Item[] = [
 ];
 
 const CONTA: Item[] = [
-  { icone: 'settings-outline', titulo: 'Configurações', sub: 'Workspace, canais e plano', rota: '/configuracoes' },
+  { icone: 'settings-outline', titulo: 'Configurações', sub: 'Workspace, canais e segurança', rota: '/configuracoes' },
   { icone: 'notifications-outline', titulo: 'Notificações', sub: '2 não lidas', rota: '/notificacoes' },
 ];
 
